@@ -204,6 +204,16 @@ export const sessionSchema = z
           .strict(),
       )
       .max(6),
+    search: z
+      .object({
+        radiusM: z.number().positive(),
+        expanded: z.boolean(),
+        result: z.enum(["empty", "ready"]),
+        source: z.enum(["google-places", "synthetic"]),
+        centreSource: z.enum(["gps", "manual"]),
+      })
+      .strict()
+      .optional(),
     decision: z
       .object({
         stopReason: z

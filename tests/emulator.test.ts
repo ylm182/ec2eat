@@ -598,3 +598,341 @@ describe("M5 shared scoring and warm-up coordination", () => {
     expect(response.headers.get("cache-control")).toBe("private, no-store");
   });
 });
+
+describe("M6 restaurant transactions", () => {
+  async function setup(label: string, mode = "results") {
+    const { restaurantRepository } = await import("../lib/server/restaurants");
+    const { syntheticPlaces } = await import("../lib/server/places");
+    const identity = await googleToken(label);
+    const { db } = adminServices();
+    await db.doc("allowedUsers/" + identity.uid).set({ enabled: true });
+    const user = await authenticate(request(identity.token));
+    const session = await decisionRepository(db, user).create({
+      requestId: "create",
+      launchId: "opening",
+      area: "中環",
+    });
+    const provider = syntheticPlaces(mode);
+    return {
+      db,
+      user,
+      session,
+      provider,
+      repo: restaurantRepository(db, user, () => provider),
+    };
+  }
+  it("persists only IDs and app metadata; explicit selection is idempotent and never a visit", async () => {
+    const { db, user, session, provider, repo } =
+      await setup("restaurants-select");
+    let searches = 0;
+    const nearby = provider.nearby;
+    provider.nearby = async (...args) => {
+      searches++;
+      return nearby(...args);
+    };
+    const body = {
+      requestId: "recommend",
+      expectedRevision: session.revision,
+      reason: "user_requested",
+    };
+    const ready = await repo.recommend(session.id, body);
+    expect(ready.status).toBe("READY");
+    expect(ready.decision.candidates).toHaveLength(3);
+    expect(ready.decision.selectedPlaceId).toBeNull();
+    expect(await repo.recommend(session.id, body)).toEqual(ready);
+    expect(searches).toBe(1);
+    expect((await repo.cards(session.id)).cards[0].name).toContain("合成");
+    const saved = JSON.stringify(
+      (
+        await db.doc("users/" + user.uid + "/sessions/" + session.id).get()
+      ).data(),
+    );
+    expect(saved).not.toMatch(
+      /合成地址|示範餐廳|latitude|longitude|photo|rating|formattedAddress/,
+    );
+    const select = {
+      requestId: "select",
+      expectedRevision: ready.revision,
+      placeId: ready.decision.candidates[1].placeId,
+      launchId: "selection-opening",
+    };
+    const selected = await repo.select(session.id, select);
+    expect(selected.status).toBe("SELECTED");
+    expect(selected.selectionLaunchId).toBe("selection-opening");
+    expect(selected.outcome.status).toBe("PENDING");
+    expect(selected.outcome.actualPlaceId).toBeNull();
+    expect(
+      Date.parse(selected.outcome.eligibleAfter!) -
+        Date.parse(selected.selectedAt!),
+    ).toBe(4 * 3600000);
+    provider.details = async () => {
+      throw new Error("offline");
+    };
+    expect(await repo.select(session.id, select)).toEqual(selected);
+    expect(await repo.recommend(session.id, body)).toEqual(ready);
+    await expect(
+      repo.select(session.id, {
+        ...select,
+        placeId: ready.decision.candidates[0].placeId,
+      }),
+    ).rejects.toMatchObject({ code: "REQUEST_ID_REUSED" });
+    expect(selected.questions).toEqual(session.questions);
+    expect(selected.answers).toEqual(session.answers);
+  });
+  it("competing selections commit once, unknown hours may be selected, arbitrary IDs and cross-user access fail", async () => {
+    const { session, repo } = await setup("restaurants-race");
+    const ready = await repo.recommend(session.id, {
+      requestId: "rec",
+      expectedRevision: 0,
+      reason: "user_requested",
+    });
+    await expect(
+      repo.select(session.id, {
+        requestId: "bad",
+        expectedRevision: ready.revision,
+        placeId: "invented",
+        launchId: "opening",
+      }),
+    ).rejects.toMatchObject({ code: "INVALID_SELECTION" });
+    const body = {
+      requestId: "same",
+      expectedRevision: ready.revision,
+      placeId: "synthetic-2",
+      launchId: "opening",
+    };
+    const same = await Promise.all([
+      repo.select(session.id, body),
+      repo.select(session.id, body),
+    ]);
+    expect(same[0]).toEqual(same[1]);
+    await expect(
+      repo.select(session.id, {
+        ...body,
+        requestId: "competing",
+        placeId: "synthetic-0",
+      }),
+    ).rejects.toMatchObject({ code: "STALE_REVISION" });
+    const other = await setup("restaurants-other");
+    await expect(other.repo.cards(session.id)).rejects.toMatchObject({
+      status: 404,
+    });
+  });
+  it("empty search needs explicit expansion, only once, and closed candidates remain excluded", async () => {
+    const { session, repo } = await setup("restaurants-empty", "closed");
+    const empty = await repo.recommend(session.id, {
+      requestId: "rec",
+      expectedRevision: 0,
+      reason: "user_requested",
+    });
+    expect(empty.status).toBe("RECOMMENDING");
+    expect(empty.search).toMatchObject({
+      radiusM: 1500,
+      expanded: false,
+      result: "empty",
+    });
+    const expanded = await repo.recommend(session.id, {
+      requestId: "expand",
+      expectedRevision: empty.revision,
+      reason: "automatic",
+      expandArea: true,
+    });
+    expect(expanded.search).toMatchObject({
+      radiusM: 5000,
+      expanded: true,
+      result: "empty",
+    });
+    await expect(
+      repo.recommend(session.id, {
+        requestId: "expand-again",
+        expectedRevision: expanded.revision,
+        reason: "automatic",
+        expandArea: true,
+      }),
+    ).rejects.toMatchObject({ code: "INVALID_EXPANSION" });
+  });
+  it("lease collapses simultaneous identical searches", async () => {
+    const { session, provider, repo } = await setup("restaurants-lease");
+    const original = provider.nearby;
+    let release!: () => void;
+    let entered!: () => void;
+    const start = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const wait = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    provider.nearby = async (...args) => {
+      entered();
+      await wait;
+      return original(...args);
+    };
+    const body = {
+      requestId: "rec",
+      expectedRevision: 0,
+      reason: "user_requested",
+    };
+    const pending = repo.recommend(session.id, body);
+    await start;
+    await expect(repo.recommend(session.id, body)).rejects.toMatchObject({
+      code: "IN_PROGRESS",
+    });
+    release();
+    const ready = await pending;
+    expect(await repo.recommend(session.id, body)).toEqual(ready);
+  });
+  it("provider failure saves the stop and permits the same retry; missing details never imply a closed or visited place", async () => {
+    const { session, provider, repo, user, db } = await setup(
+      "restaurants-failure",
+      "failure",
+    );
+    const body = {
+      requestId: "rec",
+      expectedRevision: 0,
+      reason: "user_requested",
+    };
+    await expect(repo.recommend(session.id, body)).rejects.toMatchObject({
+      code: "PLACES_UNAVAILABLE",
+    });
+    const stopped = await userRepository(db, user).session(session.id);
+    expect(stopped.status).toBe("RECOMMENDING");
+    expect(stopped.questions).toEqual(session.questions);
+    const { syntheticPlaces } = await import("../lib/server/places");
+    Object.assign(provider, syntheticPlaces("results"));
+    const ready = await repo.recommend(session.id, body);
+    provider.details = async () => {
+      throw new Error("offline");
+    };
+    expect(
+      (await repo.cards(session.id)).cards.every(
+        (c) => !c.available && c.openNow === null,
+      ),
+    ).toBe(true);
+    await expect(
+      repo.select(session.id, {
+        requestId: "select",
+        expectedRevision: ready.revision,
+        placeId: "synthetic-0",
+        launchId: "opening",
+      }),
+    ).rejects.toMatchObject({ code: "DETAILS_UNAVAILABLE" });
+    expect((await userRepository(db, user).session(session.id)).status).toBe(
+      "READY",
+    );
+  });
+  it("fresh closure blocks selection and search locations cannot silently switch areas", async () => {
+    const { session, provider, repo } = await setup("restaurants-closure");
+    await expect(
+      repo.recommend(session.id, {
+        requestId: "wrong-area",
+        expectedRevision: 0,
+        reason: "user_requested",
+        location: { latitude: 22.4445, longitude: 114.0222 },
+      }),
+    ).rejects.toMatchObject({ code: "LOCATION_CHANGED" });
+    const ready = await repo.recommend(session.id, {
+      requestId: "rec",
+      expectedRevision: 0,
+      reason: "user_requested",
+    });
+    const original = provider.details;
+    provider.details = async (...args) => ({
+      ...(await original(...args)),
+      businessStatus: "CLOSED_PERMANENTLY",
+    });
+    await expect(
+      repo.select(session.id, {
+        requestId: "select",
+        expectedRevision: ready.revision,
+        placeId: "synthetic-0",
+        launchId: "opening",
+      }),
+    ).rejects.toMatchObject({ code: "PLACE_CLOSED" });
+  });
+  it("stale search results are discarded, and changed provider sources never query synthetic IDs live", async () => {
+    const { session, provider, repo, db, user } =
+      await setup("restaurants-stale");
+    const original = provider.nearby;
+    let release!: () => void;
+    let entered!: () => void;
+    const started = new Promise<void>((r) => {
+      entered = r;
+    });
+    const wait = new Promise<void>((r) => {
+      release = r;
+    });
+    provider.nearby = async (...args) => {
+      entered();
+      await wait;
+      return original(...args);
+    };
+    const pending = repo.recommend(session.id, {
+      requestId: "rec",
+      expectedRevision: 0,
+      reason: "user_requested",
+    });
+    await started;
+    const stopped = await userRepository(db, user).session(session.id);
+    await decisionRepository(db, user).recommend(session.id, {
+      requestId: "other-request",
+      expectedRevision: stopped.revision,
+      reason: "automatic",
+    });
+    release();
+    await expect(pending).rejects.toMatchObject({ code: "STALE_REVISION" });
+    const current = await userRepository(db, user).session(session.id);
+    expect(current.decision.candidates).toEqual([]);
+    provider.nearby = original;
+    await repo.recommend(session.id, {
+      requestId: "fresh",
+      expectedRevision: current.revision,
+      reason: "automatic",
+    });
+    provider.source = "google-places";
+    let queried = false;
+    provider.details = async () => {
+      queried = true;
+      throw new Error("must not query");
+    };
+    await expect(repo.cards(session.id)).rejects.toMatchObject({
+      code: "PLACES_SOURCE_CHANGED",
+    });
+    expect(queried).toBe(false);
+  });
+  it("selection route requires authentication and exact Origin; cards never bypass access control", async () => {
+    const { POST } = await import(
+      "../app/api/decision/sessions/[id]/select/route"
+    );
+    const { GET } = await import(
+      "../app/api/decision/sessions/[id]/restaurants/route"
+    );
+    const context = { params: Promise.resolve({ id: "missing" }) };
+    expect(
+      (
+        await POST(
+          new Request("http://localhost:3000/api/test", { method: "POST" }),
+          context,
+        )
+      ).status,
+    ).toBe(401);
+    expect(
+      (await GET(new Request("http://localhost:3000/api/test"), context))
+        .status,
+    ).toBe(401);
+    const identity = await googleToken("restaurants-route");
+    const { db } = adminServices();
+    await db.doc("allowedUsers/" + identity.uid).set({ enabled: true });
+    const response = await POST(
+      new Request("http://localhost:3000/api/test", {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer " + identity.token,
+          Origin: "https://wrong.test",
+        },
+        body: "{}",
+      }),
+      context,
+    );
+    expect(response.status).toBe(403);
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+  });
+});

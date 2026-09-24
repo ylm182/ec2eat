@@ -32,6 +32,13 @@ export const recommendInput = z
     expectedRevision: z.number().int().nonnegative(),
     reason: z.enum(["automatic", "user_requested"]),
     expandArea: z.boolean().optional(),
+    location: z
+      .object({
+        latitude: z.number().min(-90).max(90),
+        longitude: z.number().min(-180).max(180),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 import {
@@ -89,7 +96,8 @@ export function decisionRepository(
         const budget = (await limit.get()).data();
         if (
           budget?.hour === Math.floor(Date.now() / 3600000) &&
-          ((kind === "create" && budget.creates >= 30) || budget.mutations >= 240)
+          ((kind === "create" && budget.creates >= 30) ||
+            budget.mutations >= 240)
         )
           throw new ApiError(
             429,
@@ -227,13 +235,6 @@ export function decisionRepository(
             next = applyAnswer(before, answerInput.parse(input), time);
           else {
             const stop = recommendInput.parse(input);
-            if (stop.expandArea)
-              throw new ApiError(
-                503,
-                "PLACES_NOT_CONFIGURED",
-                "餐廳搜尋未接通，暫時未能擴大範圍。",
-                true,
-              );
             next = requestOptions(
               before,
               stop.expectedRevision,

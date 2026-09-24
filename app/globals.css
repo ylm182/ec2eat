@@ -505,14 +505,96 @@ footer {
     padding: 22px 12px;
   }
 }
-.category-question { padding: 20px 0; }
-.category-question h2 { font-size: 23px; line-height: 1.6; }
-.category-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.category-grid button { min-height: 65px; padding: 15px; border: 1px solid #a3ae97; border-radius: 12px; background: #fcfaf5; color: var(--ink); }
-.category-grid button:disabled { opacity: .5; }
-.live-decision { margin-top: 24px; }
-.live-decision label { display: block; margin-bottom: 12px; }
-.live-decision select { width: 100%; min-height: 48px; border: 1px solid #a3ae97; border-radius: 10px; padding: 10px; color: var(--ink); background: #fcfaf5; font: inherit; }
-.live-decision li { margin: 15px 0; line-height: 1.8; }
+.category-question {
+  padding: 20px 0;
+}
+.category-question h2 {
+  font-size: 23px;
+  line-height: 1.6;
+}
+.category-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.category-grid button {
+  min-height: 65px;
+  padding: 15px;
+  border: 1px solid #a3ae97;
+  border-radius: 12px;
+  background: #fcfaf5;
+  color: var(--ink);
+}
+.category-grid button:disabled {
+  opacity: 0.5;
+}
+.live-decision {
+  margin-top: 24px;
+}
+.live-decision label {
+  display: block;
+  margin-bottom: 12px;
+}
+.live-decision select {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid #a3ae97;
+  border-radius: 10px;
+  padding: 10px;
+  color: var(--ink);
+  background: #fcfaf5;
+  font: inherit;
+}
+.live-decision li {
+  margin: 15px 0;
+  line-height: 1.8;
+}
 
-.context-panel { margin: 1rem 0; padding: .9rem; border: 1px solid var(--line, #ddd); border-radius: 14px; font-size: .9rem; }
+.context-panel {
+  margin: 1rem 0;
+  padding: 0.9rem;
+  border: 1px solid var(--line, #ddd);
+  border-radius: 14px;
+  font-size: 0.9rem;
+}
+
+.restaurant-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+}
+.restaurant-card {
+  border: 1px solid var(--border, #d6cbbd);
+  border-radius: 1rem;
+  padding: 1rem;
+  min-width: 0;
+  background: #fffcf7;
+}
+.restaurant-card img,
+.photo-placeholder {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  border-radius: 0.6rem;
+}
+.photo-placeholder {
+  display: grid;
+  place-items: center;
+  background: #efe9df;
+  color: #666;
+}
+.places-attribution {
+  margin-top: 0.8rem;
+  color: #5e5e5e;
+  font-size: 12px;
+}
+.places-attribution > span {
+  font:
+    400 14px Arial,
+    sans-serif;
+  white-space: nowrap;
+  letter-spacing: normal;
+}
+.restaurant-results button {
+  margin: 0.3rem;
+}

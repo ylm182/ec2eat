@@ -1,9 +1,11 @@
 "use client";
+import { currentLaunchId, newLaunchId } from "@/lib/client/launch";
 import { useEffect } from "react";
 import { authorizedJson } from "@/lib/client/decision-api";
 // Runs alongside context/session restoration; never gates the first question.
 export function AppWarmup({ uid }: { uid: string }) {
   useEffect(() => {
+    currentLaunchId();
     const warm = () => {
       void authorizedJson(uid, "/api/app-open", {}).catch(() => {});
     };
@@ -11,7 +13,10 @@ export function AppWarmup({ uid }: { uid: string }) {
     const visibility = () => {
       if (document.hidden) hiddenAt = Date.now();
       else {
-        if (hiddenAt !== null && Date.now() - hiddenAt >= 30 * 60000) warm();
+        if (hiddenAt !== null && Date.now() - hiddenAt >= 30 * 60000) {
+          newLaunchId();
+          warm();
+        }
         hiddenAt = null;
       }
     };

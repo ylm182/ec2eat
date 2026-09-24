@@ -1,7 +1,8 @@
 import "server-only";
+import { restaurantRepository } from "./restaurants";
 import { authenticate } from "./auth";
 import { adminServices } from "./firebase";
-import { apiResponse, ApiError, parseBody, requireOrigin } from "./http";
+import { apiResponse, parseBody, requireOrigin } from "./http";
 import { decisionRepository, recommendInput } from "./decisions";
 import { createSessionInput, answerInput } from "../domain/schema";
 export function decisionRoute(
@@ -27,13 +28,9 @@ export function decisionRoute(
       }
       const input = await parseBody(request, recommendInput);
       requestId = input.requestId;
-      await repository.recommend(id!, input);
-      // M3 records the stop transition; required Places is explicitly unavailable until M6.
-      throw new ApiError(
-        503,
-        "PLACES_NOT_CONFIGURED",
-        "答案已儲存；餐廳搜尋未接通，暫時未有餐廳推薦。",
-        true,
+      return restaurantRepository(adminServices().db, user).recommend(
+        id!,
+        input,
       );
     },
     () => requestId,

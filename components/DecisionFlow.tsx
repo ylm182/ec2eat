@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { currentLaunchId } from "@/lib/client/launch";
+import { RestaurantResults } from "./RestaurantResults";
 import { CalendarConnection } from "./CalendarConnection";
 import { resolveLocation } from "@/lib/context/location";
 import { Account } from "./Account";
@@ -145,7 +147,7 @@ function AuthenticatedDecision({ uid }: { uid: string }) {
     try {
       const body = createRequest.current ?? {
         requestId: crypto.randomUUID(),
-        launchId: crypto.randomUUID(),
+        launchId: currentLaunchId(),
         ...(location ? { location } : { area }),
       };
       createRequest.current = body;
@@ -156,7 +158,6 @@ function AuthenticatedDecision({ uid }: { uid: string }) {
       sessionStorage.setItem(key, next.id);
       sessionStorage.removeItem(createKey);
       sessionStorage.removeItem(`${createKey}.recovery`);
-      setLocation(null);
       createRequest.current = null;
       setSession(next);
     } catch (e) {
@@ -211,6 +212,7 @@ function AuthenticatedDecision({ uid }: { uid: string }) {
       requestId: crypto.randomUUID(),
       expectedRevision: session.revision,
       reason: "user_requested" as const,
+      ...(location ? { location } : {}),
     };
     stopRequest.current = body;
     try {
@@ -220,15 +222,7 @@ function AuthenticatedDecision({ uid }: { uid: string }) {
         body,
       );
     } catch (e) {
-      if (
-        !(
-          e instanceof DecisionApiError &&
-          ["PLACES_NOT_CONFIGURED", "STALE_REVISION"].includes(e.code)
-        )
-      ) {
-        setError(e instanceof Error ? e.message : text.error);
-        return;
-      }
+      setError(e instanceof Error ? e.message : text.error);
     } finally {
       locked.current = false;
       setBusy(false);
@@ -301,7 +295,7 @@ function AuthenticatedDecision({ uid }: { uid: string }) {
       )}
       {!session ? (
         <>
-          <p>定位只用嚟了解附近地區及天氣；亦可以直接手動選擇。</p>
+          <p>定位用嚟了解附近地區、天氣及搜尋餐廳；亦可以直接手動選擇。</p>
           <button
             type="button"
             className="text-button"
@@ -374,7 +368,17 @@ function AuthenticatedDecision({ uid }: { uid: string }) {
         </>
       ) : (
         <>
-          <p role="status">{text.unavailable}</p>
+          <RestaurantResults
+            key={session.id}
+            uid={uid}
+            session={session}
+            location={location}
+            onSession={(next) => {
+              setSession(next);
+              setError("");
+            }}
+            skipAuto={!!error}
+          />
           <h2>{text.trail}</h2>
           <ol>
             {session.answers.map((a) => {
@@ -397,6 +401,7 @@ function AuthenticatedDecision({ uid }: { uid: string }) {
             onClick={() => {
               sessionStorage.removeItem(key);
               setSession(null);
+              setLocation(null);
               setError("");
             }}
           >

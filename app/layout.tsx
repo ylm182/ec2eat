@@ -23,6 +23,7 @@ export default function RootLayout({
           <footer>
             <span>香港 · 好好食一餐</span>
             <Link href="/privacy">私隱</Link>
+            <Link href="/terms">使用條款</Link>
           </footer>
         </div>
       </body>

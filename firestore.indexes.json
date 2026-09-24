@@ -65,6 +65,17 @@
       "collectionGroup": "oauthConnections",
       "fieldPath": "encryptedRefreshToken",
       "indexes": []
+    },
+    {
+      "collectionGroup": "restaurantOperations",
+      "fieldPath": "expiresAt",
+      "ttl": true,
+      "indexes": []
+    },
+    {
+      "collectionGroup": "restaurantOperations",
+      "fieldPath": "response",
+      "indexes": []
     }
   ]
 }

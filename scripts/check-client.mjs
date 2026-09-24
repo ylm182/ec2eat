@@ -7,6 +7,7 @@ const forbidden = [
   "OAUTH_CLIENT_SECRET",
   "firebase-admin",
   "GOOGLE_WEATHER_API_KEY",
+  "GOOGLE_PLACES_API_KEY",
   "CALENDAR_KMS_KEY",
   "encryptedRefreshToken",
 ];
