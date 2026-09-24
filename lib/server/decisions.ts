@@ -34,10 +34,18 @@ export const recommendInput = z
     expandArea: z.boolean().optional(),
   })
   .strict();
-import { manualAreas } from "../domain/areas";
+import {
+  collectContext,
+  contextDependencies,
+  type ContextDependencies,
+} from "./context";
 const digest = (value: unknown) =>
   createHash("sha256").update(JSON.stringify(value)).digest("hex");
-export function decisionRepository(db: Firestore, user: VerifiedUser) {
+export function decisionRepository(
+  db: Firestore,
+  user: VerifiedUser,
+  dependencies?: ContextDependencies,
+) {
   const uid = idSchema.parse(user.uid);
   const root = db.collection("users").doc(uid);
   async function mutate(
@@ -59,6 +67,36 @@ export function decisionRepository(db: Firestore, user: VerifiedUser) {
     const ref = root.collection("sessions").doc(id);
     const op = root.collection("operations").doc(requestId);
     const limit = root.collection("limits").doc("decisions");
+    let context: DecisionSession["context"] | undefined;
+    if (kind === "create") {
+      // Fast replay avoids optional API calls; the transaction rechecks the hash and budget.
+      const existing = await op.get();
+      if (existing.exists) {
+        if (existing.data()!.hash !== hash)
+          throw new ApiError(
+            409,
+            "REQUEST_ID_REUSED",
+            "同一要求編號唔可以改答案。",
+          );
+        return sessionSchema.parse(decodeDocument(existing.data()!.response));
+      }
+      const budget = (await limit.get()).data();
+      if (
+        budget?.hour === Math.floor(Date.now() / 3600000) &&
+        (budget.creates >= 30 || budget.mutations >= 240)
+      )
+        throw new ApiError(
+          429,
+          "RATE_LIMITED",
+          "今個鐘嘅要求太多，請稍後再試。",
+          true,
+        );
+      context = await collectContext(
+        uid,
+        createSessionInput.parse(input),
+        dependencies ?? contextDependencies(db),
+      );
+    }
     await db.runTransaction(async (tx) => {
       const previous = await tx.get(op);
       if (previous.exists) {
@@ -101,15 +139,6 @@ export function decisionRepository(db: Firestore, user: VerifiedUser) {
             "呢個要求已建立過選擇，請載入原有記錄。",
           );
         const start = createSessionInput.parse(input);
-        if (
-          !start.area ||
-          !manualAreas.includes(start.area as (typeof manualAreas)[number])
-        )
-          throw new ApiError(
-            422,
-            "AREA_REQUIRED",
-            "請揀一個支援嘅地區。定位會喺下一階段加入。",
-          );
         const preferences = unknownPreferences();
         for (const dimension of dimensions) {
           const prior = preferenceSchema.safeParse(
@@ -126,7 +155,8 @@ export function decisionRepository(db: Firestore, user: VerifiedUser) {
           id,
           uid,
           launchId: start.launchId,
-          area: start.area,
+          area: context!.area,
+          context,
           now: time,
           preferences,
           priorVersion,

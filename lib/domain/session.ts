@@ -23,9 +23,10 @@ export class SessionError extends Error {
 }
 export function engineContext(session: DecisionSession): EngineContext {
   return {
-    rain: session.context.weather
-      ? /rain|雨/i.test(session.context.weather.condition)
-      : null,
+    rain:
+      session.context.weather && session.context.weather.condition !== "UNKNOWN"
+        ? /rain|雨/i.test(session.context.weather.condition)
+        : null,
     nextEventSoon: session.context.calendar?.nextEventSoon ?? null,
   };
 }
@@ -61,6 +62,7 @@ export function newSession(input: {
   now: string;
   priorVersion?: string;
   preferences?: DecisionSession["preferences"];
+  context?: DecisionSession["context"];
 }): DecisionSession {
   const hour = Number(
     new Intl.DateTimeFormat("en-GB", {
@@ -69,6 +71,15 @@ export function newSession(input: {
       hourCycle: "h23",
     }).format(new Date(input.now)),
   );
+  const preferences = structuredClone(
+    input.preferences ?? unknownPreferences(),
+  );
+  // Context is weak evidence and never replaces explicit or neutral answers.
+  if (
+    input.context?.calendar?.socialHint === true &&
+    (!preferences.social || preferences.social.state === "unknown")
+  )
+    preferences.social = { state: "inferred", value: 0.8, strength: 0.15 };
   return advance(
     {
       schemaVersion: 1,
@@ -84,7 +95,7 @@ export function newSession(input: {
       catalogVersion: CATALOG_VERSION,
       engineVersion: ENGINE_VERSION,
       priorVersion: input.priorVersion ?? "initial",
-      context: {
+      context: input.context ?? {
         capturedAt: input.now,
         timezone: "Asia/Hong_Kong",
         meal:
@@ -103,7 +114,7 @@ export function newSession(input: {
           location: "absent",
         },
       },
-      preferences: input.preferences ?? unknownPreferences(),
+      preferences,
       questions: [],
       answers: [],
       decision: {

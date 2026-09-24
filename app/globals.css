@@ -514,3 +514,5 @@ footer {
 .live-decision label { display: block; margin-bottom: 12px; }
 .live-decision select { width: 100%; min-height: 48px; border: 1px solid #a3ae97; border-radius: 10px; padding: 10px; color: var(--ink); background: #fcfaf5; font: inherit; }
 .live-decision li { margin: 15px 0; line-height: 1.8; }
+
+.context-panel { margin: 1rem 0; padding: .9rem; border: 1px solid var(--line, #ddd); border-radius: 14px; font-size: .9rem; }

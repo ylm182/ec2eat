@@ -276,3 +276,205 @@ describe("M3 transactional decisions", () => {
     ).rejects.toMatchObject({ status: 409 });
   }, 20_000);
 });
+
+describe("M4 context and Calendar authorization in Firestore", () => {
+  it("persists only coarse context and replays without another provider call", async () => {
+    const identity = await googleToken("context-owner");
+    const { db } = adminServices();
+    await db.doc(`allowedUsers/${identity.uid}`).set({ enabled: true });
+    const user = await authenticate(request(identity.token));
+    let weatherCalls = 0;
+    const repo = decisionRepository(db, user, {
+      mock: true,
+      weather: async () => {
+        weatherCalls++;
+        return { condition: "RAIN", temperatureC: 24 };
+      },
+      calendar: async () => ({
+        version: 1,
+        nextEventSoon: true,
+        socialHint: true,
+        areaHint: "灣仔",
+        mealHint: "lunch",
+      }),
+    });
+    const body = {
+      requestId: "m4-create",
+      launchId: "m4-launch",
+      location: { latitude: 22.2819, longitude: 114.1589 },
+    };
+    const first = await repo.create(body);
+    expect(await repo.create(body)).toEqual(first);
+    expect(weatherCalls).toBe(1);
+    expect(first.context).toMatchObject({
+      area: "中環",
+      locationSource: "gps",
+      calendar: { nextEventSoon: true, areaHint: "灣仔" },
+    });
+    const saved = (
+      await db.doc(`users/${user.uid}/sessions/${first.id}`).get()
+    ).data();
+    expect(JSON.stringify(saved)).not.toMatch(
+      /latitude|longitude|22.2819|114.1589/,
+    );
+    expect((await userRepository(db, user).session(first.id)).context).toEqual(
+      first.context,
+    );
+  });
+  it("OAuth state rejects wrong browser, expiry, replay and revoked allowlist", async () => {
+    const { CalendarAuthorization } = await import(
+      "../lib/server/calendar-oauth"
+    );
+    const { db } = adminServices();
+    const vault = {
+      seal: async () => "cipher-fixture",
+      open: async () => "synthetic-refresh",
+    };
+    const flow = new CalendarAuthorization(
+      db,
+      {
+        clientId: "synthetic-client",
+        clientSecret: "synthetic-secret",
+        origin: "https://example.test",
+      },
+      vault,
+    );
+    for (const uid of ["oauth-state", "oauth-expired", "oauth-denied"])
+      await db.doc(`allowedUsers/${uid}`).set({ enabled: true });
+    const begun = await flow.begin("oauth-state");
+    const state = new URL(begun.url).searchParams.get("state")!;
+    expect(new URL(begun.url).searchParams.get("scope")).toBe(
+      "https://www.googleapis.com/auth/calendar.events.readonly",
+    );
+    await expect(flow.consume(state, "wrong")).rejects.toMatchObject({
+      code: "INVALID_STATE",
+    });
+    expect(await flow.consume(state, begun.binding)).toMatchObject({
+      uid: "oauth-state",
+    });
+    await expect(flow.consume(state, begun.binding)).rejects.toMatchObject({
+      code: "INVALID_STATE",
+    });
+    const expired = await flow.begin("oauth-expired");
+    const { createHash } = await import("node:crypto");
+    const { Timestamp } = await import("firebase-admin/firestore");
+    const expiredState = new URL(expired.url).searchParams.get("state")!;
+    await db
+      .doc(
+        `oauthStates/${createHash("sha256").update(expiredState).digest("hex")}`,
+      )
+      .update({ expiresAt: Timestamp.fromMillis(0) });
+    await expect(
+      flow.consume(expiredState, expired.binding),
+    ).rejects.toMatchObject({ code: "INVALID_STATE" });
+    const denied = await flow.begin("oauth-denied");
+    await db.doc("allowedUsers/oauth-denied").set({ enabled: false });
+    await expect(
+      flow.consume(
+        new URL(denied.url).searchParams.get("state")!,
+        denied.binding,
+      ),
+    ).rejects.toMatchObject({ code: "NOT_ALLOWED" });
+  });
+  it("stores ciphertext only; revoked refresh clears authorization; disconnect blocks late callbacks", async () => {
+    const { CalendarAuthorization, CALENDAR_SCOPE } = await import(
+      "../lib/server/calendar-oauth"
+    );
+    const { db } = adminServices();
+    const uid = "oauth-tokens";
+    await db.doc(`allowedUsers/${uid}`).set({ enabled: true });
+    let revoked = false;
+    const flow = new CalendarAuthorization(
+      db,
+      {
+        clientId: "synthetic-client",
+        clientSecret: "synthetic-secret",
+        origin: "https://example.test",
+      },
+      {
+        seal: async () => "encrypted-only",
+        open: async () => "synthetic-refresh",
+      },
+      async () =>
+        new Response(
+          JSON.stringify(
+            revoked
+              ? { error: "invalid_grant" }
+              : {
+                  access_token: "synthetic-access",
+                  refresh_token: "synthetic-refresh",
+                  scope: CALENDAR_SCOPE,
+                  expires_in: 3600,
+                  token_type: "Bearer",
+                },
+          ),
+          { status: revoked ? 400 : 200 },
+        ),
+    );
+    const begun = await flow.begin(uid);
+    const identity = await flow.consume(
+      new URL(begun.url).searchParams.get("state")!,
+      begun.binding,
+    );
+    await flow.finish(identity, "synthetic-code", new AbortController().signal);
+    const saved = (await db.doc(`oauthConnections/${uid}`).get()).data();
+    expect(saved?.encryptedRefreshToken).toBe("encrypted-only");
+    expect(JSON.stringify(saved)).not.toMatch(
+      /synthetic-refresh|synthetic-access|synthetic-code|synthetic-secret/,
+    );
+    expect((await db.doc(`users/${uid}`).get()).data()?.calendarConnected).toBe(
+      true,
+    );
+    revoked = true;
+    await expect(
+      flow.access(uid, new AbortController().signal),
+    ).rejects.toMatchObject({ code: "denied" });
+    expect(
+      (await db.doc(`oauthConnections/${uid}`).get()).data()
+        ?.encryptedRefreshToken,
+    ).toBeUndefined();
+    expect((await db.doc(`users/${uid}`).get()).data()?.calendarConnected).toBe(
+      false,
+    );
+    revoked = false;
+    await flow.clear(uid);
+    await expect(
+      flow.finish(identity, "late-code", new AbortController().signal),
+    ).rejects.toMatchObject({ code: "denied" });
+  });
+  it("Calendar mutation requires Origin; absent config stays optional and private", async () => {
+    const { calendarRoute } = await import("../lib/server/calendar-route");
+    const identity = await googleToken("calendar-routes");
+    const { db } = adminServices();
+    await db.doc(`allowedUsers/${identity.uid}`).set({ enabled: true });
+    const wrong = await calendarRoute(
+      new Request("http://localhost:3000/api/calendar/start", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${identity.token}`,
+          Origin: "https://wrong.test",
+        },
+      }),
+      "start",
+    );
+    expect(wrong.status).toBe(403);
+    const status = await calendarRoute(request(identity.token), "status");
+    expect((await status.json()).data).toEqual({
+      configured: false,
+      connected: false,
+      fixture: null,
+    });
+    expect(status.headers.get("cache-control")).toBe("private, no-store");
+    const start = await calendarRoute(
+      new Request("http://localhost:3000/api/calendar/start", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${identity.token}`,
+          Origin: "http://localhost:3000",
+        },
+      }),
+      "start",
+    );
+    expect(start.status).toBe(503);
+  });
+});

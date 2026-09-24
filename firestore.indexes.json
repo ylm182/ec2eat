@@ -54,6 +54,17 @@
       "collectionGroup": "operations",
       "fieldPath": "response",
       "indexes": []
+    },
+    {
+      "collectionGroup": "oauthStates",
+      "fieldPath": "expiresAt",
+      "ttl": true,
+      "indexes": []
+    },
+    {
+      "collectionGroup": "oauthConnections",
+      "fieldPath": "encryptedRefreshToken",
+      "indexes": []
     }
   ]
 }

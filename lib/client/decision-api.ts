@@ -9,7 +9,7 @@ export class DecisionApiError extends Error {
     super(message);
   }
 }
-export async function decisionApi(
+export async function authorizedJson(
   uid: string,
   path: string,
   body?: unknown,
@@ -33,5 +33,14 @@ export async function decisionApi(
     throw new DecisionApiError("UNAUTHENTICATED", "請重新登入。");
   if (!response.ok)
     throw new DecisionApiError(result.error.code, result.error.message);
-  return sessionSchema.parse(result.data);
+  return result.data;
+}
+
+export async function decisionApi(
+  uid: string,
+  path: string,
+  body?: unknown,
+  signal?: AbortSignal,
+) {
+  return sessionSchema.parse(await authorizedJson(uid, path, body, signal));
 }

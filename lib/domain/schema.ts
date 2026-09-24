@@ -131,6 +131,14 @@ export const contextSchema = z
       .object({
         condition: text,
         temperatureC: z.number().finite().nullable(),
+        feelsLikeC: z.number().finite().nullable().optional(),
+        humidity: z.number().min(0).max(100).nullable().optional(),
+        precipitationProbability: z
+          .number()
+          .min(0)
+          .max(100)
+          .nullable()
+          .optional(),
         provenance: provenanceSchema,
       })
       .strict()
@@ -139,6 +147,8 @@ export const contextSchema = z
       .object({
         nextEventSoon: z.boolean(),
         socialHint: z.boolean().nullable(),
+        areaHint: text.nullable().optional(),
+        mealHint: z.enum(["lunch", "dinner"]).nullable().optional(),
         provenance: provenanceSchema,
       })
       .strict()

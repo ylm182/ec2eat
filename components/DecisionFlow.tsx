@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { CalendarConnection } from "./CalendarConnection";
+import { resolveLocation } from "@/lib/context/location";
 import { Account } from "./Account";
 import {
   DecisionSwipeCard,
@@ -31,6 +33,47 @@ export function DecisionFlow() {
 function AuthenticatedDecision({ uid }: { uid: string }) {
   const [session, setSession] = useState<DecisionSession | null>(null);
   const [area, setArea] = useState("");
+  const [location, setLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  const [locating, setLocating] = useState(false);
+  const [locationMessage, setLocationMessage] = useState("");
+  const [recoverId, setRecoverId] = useState<string | null>(null);
+  async function locate() {
+    if (!navigator.geolocation) {
+      setLocationMessage("瀏覽器未能定位，請手動揀地區。");
+      return;
+    }
+    setLocating(true);
+    setLocationMessage("定位中…");
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        try {
+          const coords = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          };
+          const resolved = resolveLocation({ location: coords });
+          setLocation(coords);
+          setArea(resolved.area);
+          setLocationMessage(`定位約喺${resolved.area}附近。只會儲存地區。`);
+        } catch {
+          setLocation(null);
+          setLocationMessage("未能確認香港範圍，請手動揀地區。");
+        } finally {
+          setLocating(false);
+        }
+      },
+      () => {
+        setLocation(null);
+        setLocationMessage("定位未獲批准或暫時不可用，請手動揀地區。");
+        setLocating(false);
+      },
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 },
+    );
+  }
+
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -57,6 +100,20 @@ function AuthenticatedDecision({ uid }: { uid: string }) {
           signal,
         ),
       );
+    const recovery = sessionStorage.getItem(`${createKey}.recovery`);
+    if (recovery && idSchema.safeParse(recovery).success) {
+      setRecoverId(recovery);
+      const restored = await decisionApi(
+        uid,
+        `/api/decision/requests/${recovery}`,
+        undefined,
+        signal,
+      );
+      setSession(restored);
+      sessionStorage.setItem(key, restored.id);
+      sessionStorage.removeItem(`${createKey}.recovery`);
+      setRecoverId(null);
+    }
     const pending = sessionStorage.getItem(createKey);
     if (pending) {
       const parsed = createSessionInput.safeParse(JSON.parse(pending));
@@ -89,13 +146,17 @@ function AuthenticatedDecision({ uid }: { uid: string }) {
       const body = createRequest.current ?? {
         requestId: crypto.randomUUID(),
         launchId: crypto.randomUUID(),
-        area,
+        ...(location ? { location } : { area }),
       };
       createRequest.current = body;
-      sessionStorage.setItem(createKey, JSON.stringify(body));
+      if (body.location)
+        sessionStorage.setItem(`${createKey}.recovery`, body.requestId);
+      else sessionStorage.setItem(createKey, JSON.stringify(body));
       const next = await decisionApi(uid, "/api/decision/sessions", body);
       sessionStorage.setItem(key, next.id);
       sessionStorage.removeItem(createKey);
+      sessionStorage.removeItem(`${createKey}.recovery`);
+      setLocation(null);
       createRequest.current = null;
       setSession(next);
     } catch (e) {
@@ -181,19 +242,89 @@ function AuthenticatedDecision({ uid }: { uid: string }) {
       setError(e instanceof Error ? e.message : text.error);
     }
   }
+  async function recover() {
+    setLoading(true);
+    setError("");
+    try {
+      await restore();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : text.error);
+    } finally {
+      setLoading(false);
+    }
+  }
   if (loading) return <p role="status">{text.resume}</p>;
   const question = session?.questions.at(-1);
   return (
     <section className="live-decision">
       {error && <p role="alert">{error}</p>}
+      {recoverId && !session ? (
+        <div>
+          <p>正在恢復上次定位建立嘅選擇。精確位置冇儲存喺瀏覽器。</p>
+          <button onClick={recover}>重新載入已儲存選擇</button>
+          <button
+            onClick={() => {
+              sessionStorage.removeItem(`${createKey}.recovery`);
+              setRecoverId(null);
+              setError("");
+            }}
+          >
+            放棄恢復，重新開始
+          </button>
+        </div>
+      ) : null}
+      {!session && <CalendarConnection uid={uid} />}
+      {session && (
+        <div className="hint">
+          <p>
+            {session.context.availability.fixture === "available"
+              ? "合成測試情境 · "
+              : ""}
+            {session.context.area} ·{" "}
+            {session.context.locationSource === "gps" ? "定位地區" : "手動地區"}{" "}
+            · {session.context.weather ? "已取得天氣" : "天氣未知"} ·{" "}
+            {session.context.calendar ? "已取得行程提示" : "未使用行程"}
+            。今次提示已固定。
+          </p>
+          {session.context.calendar && (
+            <p>
+              {session.context.calendar.nextEventSoon
+                ? "一小時內有定時行程，會優先考慮用餐速度。"
+                : "未有一小時內嘅定時行程提示。"}
+              你的答案仍然優先。
+            </p>
+          )}
+          {session.context.weather?.provenance.source === "google-weather" && (
+            <p>天氣資料：Google Weather</p>
+          )}
+        </div>
+      )}
       {!session ? (
         <>
+          <p>定位只用嚟了解附近地區及天氣；亦可以直接手動選擇。</p>
+          <button
+            type="button"
+            className="text-button"
+            disabled={
+              busy || locating || !!createRequest.current || !!recoverId
+            }
+            onClick={locate}
+          >
+            {locating ? "定位中…" : "使用目前位置"}
+          </button>
+          {locationMessage && <p role="status">{locationMessage}</p>}
           <label htmlFor="area">{text.areaLabel}</label>
           <select
             id="area"
             value={area}
-            disabled={busy || !!createRequest.current}
-            onChange={(e) => setArea(e.target.value)}
+            disabled={
+              busy || locating || !!createRequest.current || !!recoverId
+            }
+            onChange={(e) => {
+              setArea(e.target.value);
+              setLocation(null);
+              setLocationMessage("");
+            }}
           >
             <option value="">{text.chooseArea}</option>
             {manualAreas.map((a) => (
@@ -201,7 +332,11 @@ function AuthenticatedDecision({ uid }: { uid: string }) {
             ))}
           </select>
           <p className="hint">{text.context}</p>
-          <button className="primary" disabled={busy || !area} onClick={start}>
+          <button
+            className="primary"
+            disabled={busy || locating || !!recoverId || !area}
+            onClick={start}
+          >
             {busy
               ? text.loading
               : createRequest.current

@@ -6,6 +6,9 @@ const forbidden = [
   "HF_TOKEN",
   "OAUTH_CLIENT_SECRET",
   "firebase-admin",
+  "GOOGLE_WEATHER_API_KEY",
+  "CALENDAR_KMS_KEY",
+  "encryptedRefreshToken",
 ];
 async function walk(path) {
   for (const item of await readdir(path, { withFileTypes: true })) {

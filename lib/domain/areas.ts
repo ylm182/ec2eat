@@ -1,4 +1,4 @@
-// Coarse manual choices only. Coordinates/centroids are introduced in M4.
+// Coarse manual choices; app-curated approximate centres live in context/location.ts.
 export const manualAreas = [
   "中環",
   "灣仔",
