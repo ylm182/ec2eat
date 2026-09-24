@@ -478,3 +478,123 @@ describe("M4 context and Calendar authorization in Firestore", () => {
     expect(start.status).toBe(503);
   });
 });
+
+describe("M5 shared scoring and warm-up coordination", () => {
+  it("only one lease wins, scheduled bypasses suppression, expired ownership cannot release a successor", async () => {
+    const { FirestoreLayaStore } = await import("../lib/laya/store");
+    const { db } = adminServices();
+    const store = new FirestoreLayaStore(db);
+    const now = Date.now();
+    const results = await Promise.all([
+      store.acquire("a", now, 5000, true),
+      store.acquire("b", now, 5000, true),
+    ]);
+    expect(results.filter(Boolean)).toHaveLength(1);
+    const owner = results[0] ? "a" : "b";
+    await store.release(owner, true, now + 100);
+    expect(await store.acquire("suppressed", now + 101, 5000, true)).toBe(
+      false,
+    );
+    expect(await store.acquire("scheduled", now + 102, 5000, false)).toBe(true);
+    expect(await store.acquire("successor", now + 6000, 5000, false)).toBe(
+      true,
+    );
+    await store.release("scheduled", true, now + 6001);
+    expect((await db.doc("internal/layaWarmup").get()).data()?.owner).toBe(
+      "successor",
+    );
+    expect(await store.acquire("blocked", now + 6002, 5000, false)).toBe(false);
+  });
+  it("three consecutive failures open circuit for 60 seconds and success resets it", async () => {
+    const { FirestoreLayaStore } = await import("../lib/laya/store");
+    const { db } = adminServices();
+    const store = new FirestoreLayaStore(db);
+    const now = Date.now();
+    await store.record(false, now);
+    await store.record(false, now + 1);
+    expect(await store.circuitOpen(now + 2)).toBe(false);
+    await store.record(false, now + 2);
+    expect(await store.circuitOpen(now + 3)).toBe(true);
+    expect(await store.circuitOpen(now + 60003)).toBe(false);
+    await store.record(true, now + 60004);
+    expect(await store.circuitOpen(now + 60005)).toBe(false);
+  });
+  it("scores outside transactions, retains returned provider metadata and replay never rescoring", async () => {
+    const { HeuristicDecisionProvider } = await import(
+      "../lib/providers/heuristic"
+    );
+    const identity = await googleToken("laya-owner");
+    const { db } = adminServices();
+    await db.doc(`allowedUsers/${identity.uid}`).set({ enabled: true });
+    const user = await authenticate(request(identity.token));
+    let calls = 0;
+    const repo = decisionRepository(db, user, undefined, async (input) => {
+      calls++;
+      return {
+        ...(await new HeuristicDecisionProvider().rank(
+          input,
+          new AbortController().signal,
+        )),
+        fallbackReason: "laya_http_503",
+      };
+    });
+    const created = await repo.create({
+      requestId: "laya-create",
+      launchId: "launch",
+      area: "中環",
+    });
+    expect(created.decision.fallbackReason).toBe("laya_http_503");
+    expect(calls).toBe(1);
+    const body = {
+      requestId: "laya-answer",
+      expectedRevision: 0,
+      questionInstanceId: created.questions[0].instanceId,
+      action: "neutral",
+    };
+    const answered = await repo.answer(created.id, body);
+    expect(await repo.answer(created.id, body)).toEqual(answered);
+    expect(calls).toBe(2);
+    expect(answered.questions[0]).toEqual(created.questions[0]);
+  });
+  it("app-open is authenticated and Origin protected, while missing HF is honest", async () => {
+    const { POST } = await import("../app/api/app-open/route");
+    expect(
+      (
+        await POST(
+          new Request("http://localhost:3000/api/app-open", { method: "POST" }),
+        )
+      ).status,
+    ).toBe(401);
+    const identity = await googleToken("warmup-owner");
+    const { db } = adminServices();
+    await db.doc(`allowedUsers/${identity.uid}`).set({ enabled: true });
+    expect(
+      (
+        await POST(
+          new Request("http://localhost:3000/api/app-open", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${identity.token}`,
+              Origin: "https://wrong.test",
+            },
+          }),
+        )
+      ).status,
+    ).toBe(403);
+    const response = await POST(
+      new Request("http://localhost:3000/api/app-open", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${identity.token}`,
+          Origin: "http://localhost:3000",
+        },
+      }),
+    );
+    expect(response.status).toBe(200);
+    expect((await response.json()).data).toEqual({
+      status: "unavailable",
+      reason: "laya_emulator",
+    });
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+  });
+});

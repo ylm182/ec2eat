@@ -1,4 +1,4 @@
-name: M1 checks
+name: Milestone checks
 on: [push, pull_request]
 jobs:
   foundation:
@@ -14,6 +14,8 @@ jobs:
           distribution: temurin
           java-version: 21
       - run: npm ci
+      - run: npm --prefix functions ci
+      - run: npm --prefix functions run build
       - run: npm run typecheck
       - run: npm test
       - run: npm run test:emulator

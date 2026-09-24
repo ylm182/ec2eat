@@ -2,7 +2,7 @@
 
 ## Local development
 
-`npm run dev:emulator` loads `.env.example` into only the development process. Start `npm run emulators`, then `npm run seed:emulator` first. Java 21 is required for Firestore. Node 22 is required for the app. `npm run test:emulator` starts/stops isolated emulators and refuses to run without both emulator hosts. It clears only `demo-ec2eat` Firestore test data; do not run it alongside a manual session you wish to preserve.
+`npm run dev:emulator` loads `.env.example` into only the development process. Start `npm run emulators`, then `npm run seed:emulator` first. Java 21 is required for Firestore. Node 22 is required for the app. `npm run test:emulator` starts/stops isolated emulators and refuses to run without both emulator hosts. It uses isolated Auth/Firestore ports 9199/8180 and clears only its `demo-ec2eat` test data. The manual preview remains on 9099/8080. Do not point the test process at the preview hosts.
 
 The development seed uses synthetic email addresses and server-managed allowlist entries. Google sign-in is simulated by Firebase Auth emulator. There is no local bearer-token bypass. Missing integrations are explicit, not mock restaurants passed off as Places results.
 
@@ -54,3 +54,11 @@ Gemini: enable the project API/billing and least-privilege Vertex access for ADC
 Synthetic frontend scenarios: restart the dev process with `CONTEXT_FIXTURE=rain-busy npm run dev:emulator`, `CONTEXT_FIXTURE=all-day npm run dev:emulator`, or `CONTEXT_FIXTURE=failures npm run dev:emulator`. Never use these in live mode. Start a new decision after changing fixture; an existing session correctly retains its original context. The default `npm run dev:emulator` has no fixture or live optional calls.
 
 Read-only provider contracts were checked against [Google Calendar events](https://developers.google.com/workspace/calendar/api/v3/reference/events/list), [web-server OAuth](https://developers.google.com/identity/protocols/oauth2/web-server), [Weather current conditions](https://developers.google.com/maps/documentation/weather/current-conditions), [KMS encryption](https://docs.cloud.google.com/kms/docs/reference/rest/v1/projects.locations.keyRings.cryptoKeys/encrypt), and [Gemini 3.5 Flash-Lite](https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/gemini/3-5-flash-lite). Live smoke tests are still required.
+
+## M5 scoring and scheduled function
+
+`npm --prefix functions ci` then `npm --prefix functions run build` verifies the separate Node 22 scheduled worker. CI runs this build. Firebase configuration references the `functions` source/codebase, but nothing is deployed by ordinary build/test commands. The worker shares the Next app's Firestore project and `internal/layaWarmup` / `internal/layaCircuit` documents. No additional index is needed; direct browser access remains denied.
+
+Follow `tests/fixtures/laya/README.md` before installing a real recipe. Set server-only `LAYA_BASE_URL` (protected HF origin), `LAYA_MODEL_REVISION` and `LAYA_RUNTIME_VERSION` to its verified values and supply `HF_TOKEN` through Secret Manager for both App Hosting and the scheduled worker. Environment variables alone cannot enable the null recipe. Deployment must verify scheduler service-account IAM and reject anonymous HTTP invocation; [Firebase scheduled functions](https://firebase.google.com/docs/functions/schedule-functions) create the associated job and invocation permissions. Do not manually expose a public worker. Keep the schedule in Taiwan, Firestore in Hong Kong, and HF replica/idle settings as explicitly verified in its control plane.
+
+The warm-up input is a tiny synthetic two-candidate inference request passed through the installed recipe; readiness is not assumed from a generic health ping. The installed recipe's live fixture must verify that input. Scheduled 11:00/17:00 calls do not guarantee lunch/dinner readiness after idle scale-down; app-open warm-up and fallback remain required. No continuous keep-alive or model upgrade is added.

@@ -11,7 +11,7 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --exclude tests/emulator.test.ts",
-    "test:emulator": "firebase emulators:exec --project demo-ec2eat --only auth,firestore 'vitest run tests/emulator.test.ts'",
+    "test:emulator": "firebase emulators:exec --config firebase.test.json --project demo-ec2eat --only auth,firestore 'vitest run tests/emulator.test.ts'",
     "emulators": "firebase emulators:start --project demo-ec2eat --only auth,firestore",
     "seed:emulator": "node --env-file=.env.example --import tsx scripts/seed-emulator.ts",
     "check:client": "node scripts/check-client.mjs",

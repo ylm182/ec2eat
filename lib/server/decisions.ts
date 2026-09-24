@@ -39,12 +39,17 @@ import {
   contextDependencies,
   type ContextDependencies,
 } from "./context";
+import { scoringInput, applyScoring } from "../domain/scoring";
+import { layaService } from "./laya";
+import type { DecisionInput, DecisionResult } from "../providers/contracts";
 const digest = (value: unknown) =>
   createHash("sha256").update(JSON.stringify(value)).digest("hex");
 export function decisionRepository(
   db: Firestore,
   user: VerifiedUser,
   dependencies?: ContextDependencies,
+  rank: (input: DecisionInput) => Promise<DecisionResult> = (input) =>
+    layaService(db).rank(input),
 ) {
   const uid = idSchema.parse(user.uid);
   const root = db.collection("users").doc(uid);
@@ -68,7 +73,7 @@ export function decisionRepository(
     const op = root.collection("operations").doc(requestId);
     const limit = root.collection("limits").doc("decisions");
     let context: DecisionSession["context"] | undefined;
-    if (kind === "create") {
+    {
       // Fast replay avoids optional API calls; the transaction rechecks the hash and budget.
       const existing = await op.get();
       if (existing.exists) {
@@ -80,22 +85,94 @@ export function decisionRepository(
           );
         return sessionSchema.parse(decodeDocument(existing.data()!.response));
       }
-      const budget = (await limit.get()).data();
-      if (
-        budget?.hour === Math.floor(Date.now() / 3600000) &&
-        (budget.creates >= 30 || budget.mutations >= 240)
-      )
-        throw new ApiError(
-          429,
-          "RATE_LIMITED",
-          "今個鐘嘅要求太多，請稍後再試。",
-          true,
+      {
+        const budget = (await limit.get()).data();
+        if (
+          budget?.hour === Math.floor(Date.now() / 3600000) &&
+          ((kind === "create" && budget.creates >= 30) || budget.mutations >= 240)
+        )
+          throw new ApiError(
+            429,
+            "RATE_LIMITED",
+            "今個鐘嘅要求太多，請稍後再試。",
+            true,
+          );
+      }
+      if (kind === "create") {
+        context = await collectContext(
+          uid,
+          createSessionInput.parse(input),
+          dependencies ?? contextDependencies(db),
         );
-      context = await collectContext(
+      }
+    }
+    // Prepare scoring outside the transaction. A changed snapshot never applies a stale result.
+    const draftTime = new Date().toISOString();
+    const makeStart = (profile: Record<string, unknown>) => {
+      const preferences = unknownPreferences();
+      for (const dimension of dimensions) {
+        const prior = preferenceSchema.safeParse(
+          (profile.priors as Record<string, unknown> | undefined)?.[dimension],
+        );
+        if (prior.success && prior.data.state === "inferred")
+          preferences[dimension] = prior.data;
+      }
+      const start = createSessionInput.parse(input);
+      return newSession({
+        id,
         uid,
-        createSessionInput.parse(input),
-        dependencies ?? contextDependencies(db),
-      );
+        launchId: start.launchId,
+        area: context!.area,
+        context,
+        now: draftTime,
+        preferences,
+        priorVersion:
+          typeof profile.priorVersion === "string"
+            ? profile.priorVersion
+            : "initial",
+      });
+    };
+    let scored: DecisionResult | undefined;
+    let scoredHash: string | undefined;
+    if (kind !== "recommend") {
+      let draft: DecisionSession;
+      if (kind === "create") draft = makeStart((await root.get()).data() ?? {});
+      else {
+        const saved = await ref.get();
+        if (!saved.exists)
+          throw new ApiError(404, "NOT_FOUND", "搵唔到呢次選擇。");
+        const before = sessionSchema.parse(decodeDocument(saved.data()));
+        if (before.uid !== uid || before.id !== id)
+          throw new ApiError(404, "NOT_FOUND", "搵唔到呢次選擇。");
+        try {
+          draft = applyAnswer(before, answerInput.parse(input), draftTime);
+        } catch (error) {
+          // A concurrent identical request may have committed between the preflight reads.
+          if (error instanceof SessionError) {
+            const replay = await op.get();
+            if (replay.exists) {
+              if (replay.data()!.hash !== hash)
+                throw new ApiError(
+                  409,
+                  "REQUEST_ID_REUSED",
+                  "同一要求編號唔可以改答案。",
+                );
+              return sessionSchema.parse(
+                decodeDocument(replay.data()!.response),
+              );
+            }
+            throw new ApiError(
+              error.code === "INVALID_ANSWER" ? 422 : 409,
+              error.code,
+              error.message,
+            );
+          }
+          throw error;
+        }
+      }
+      const scoreInput = scoringInput(draft);
+      scoredHash = digest(scoreInput);
+      scored = await rank(scoreInput);
     }
     await db.runTransaction(async (tx) => {
       const previous = await tx.get(op);
@@ -138,29 +215,7 @@ export function decisionRepository(
             "SESSION_ALREADY_EXISTS",
             "呢個要求已建立過選擇，請載入原有記錄。",
           );
-        const start = createSessionInput.parse(input);
-        const preferences = unknownPreferences();
-        for (const dimension of dimensions) {
-          const prior = preferenceSchema.safeParse(
-            profile.data()?.priors?.[dimension],
-          );
-          if (prior.success && prior.data.state === "inferred")
-            preferences[dimension] = prior.data;
-        }
-        const priorVersion =
-          typeof profile.data()?.priorVersion === "string"
-            ? profile.data()!.priorVersion
-            : "initial";
-        next = newSession({
-          id,
-          uid,
-          launchId: start.launchId,
-          area: context!.area,
-          context,
-          now: time,
-          preferences,
-          priorVersion,
-        });
+        next = makeStart(profile.data() ?? {});
       } else {
         if (!saved.exists)
           throw new ApiError(404, "NOT_FOUND", "搵唔到呢次選擇。");
@@ -197,6 +252,8 @@ export function decisionRepository(
         }
         validateTransition(before, next);
       }
+      if (scored && scoredHash === digest(scoringInput(next)))
+        next = applyScoring(next, scored);
       const document = encodeDocument(next) as Record<string, unknown>;
       // Commit timestamps and the replay snapshot resolve in the same Firestore commit.
       document.updatedAt = FieldValue.serverTimestamp();

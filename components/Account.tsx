@@ -7,6 +7,7 @@ import {
   signOut,
 } from "firebase/auth";
 import { clientAuth } from "@/lib/client/firebase";
+import { AppWarmup } from "./AppWarmup";
 import { copy } from "@/lib/copy";
 export function Account({
   onAuthorizationChange,
@@ -16,6 +17,7 @@ export function Account({
   const [state, setState] = useState<
     "loading" | "setup" | "signed-out" | "allowed" | "denied"
   >("loading");
+  const [verifiedUid, setVerifiedUid] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   useEffect(() => {
@@ -28,6 +30,7 @@ export function Account({
     }
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       const current = ++sequence;
+      setVerifiedUid(null);
       if (!user) {
         onAuthorizationChange?.(null);
         setState("signed-out");
@@ -42,6 +45,7 @@ export function Account({
         });
         const body = await response.json();
         if (!active || current !== sequence) return;
+        setVerifiedUid(response.ok ? user.uid : null);
         onAuthorizationChange?.(response.ok ? user.uid : null);
         setState(response.ok ? "allowed" : "denied");
         setMessage(response.ok ? copy.account.allowed : body.error.message);
@@ -72,6 +76,7 @@ export function Account({
   }
   return (
     <section className="account" aria-label={copy.account.label}>
+      {verifiedUid && <AppWarmup uid={verifiedUid} />}
       {state === "loading" && <p role="status">{copy.account.loading}</p>}
       {state === "setup" && <p>{copy.setup}</p>}
       {state === "signed-out" && (
