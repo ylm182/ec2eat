@@ -45,6 +45,7 @@ const place = z.object({
     .array(
       z.object({
         name: z.string().max(2000),
+        googleMapsUri: z.string().optional(),
         authorAttributions: z.array(author).max(20).optional(),
       }),
     )
@@ -156,9 +157,11 @@ export class GooglePlacesProvider implements RestaurantProvider {
     if (value.id !== id) throw new Error("Place ID mismatch");
     let photo: RestaurantCard["photo"] = null;
     const first = value.photos?.[0];
+    const photoMapsUri = safeGoogleMapsUrl(first?.googleMapsUri);
     if (
       includePhoto &&
       first &&
+      photoMapsUri &&
       first.name.startsWith(`places/${id}/photos/`) &&
       /^places\/[A-Za-z0-9_-]+\/photos\/[A-Za-z0-9_-]+$/.test(first.name)
     )
@@ -185,6 +188,7 @@ export class GooglePlacesProvider implements RestaurantProvider {
         )
           photo = {
             url: url.href,
+            mapsUri: photoMapsUri,
             authors: (first.authorAttributions ?? []).map((a) => ({
               name: a.displayName,
               uri: safeGoogleMapsUrl(a.uri),

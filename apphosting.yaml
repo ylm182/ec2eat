@@ -10,11 +10,42 @@ env:
   - variable: APP_MODE
     value: live
     availability: [RUNTIME]
+  - variable: APP_ORIGIN
+    value: https://ec2eat--ec2eat-davidyu-prod.asia-east1.hosted.app
+    availability: [RUNTIME]
+  - variable: GOOGLE_CLOUD_PROJECT
+    value: ec2eat-davidyu-prod
+    availability: [RUNTIME]
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    value: ec2eat-davidyu-prod
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+    value: AIzaSyAqSXmhwGxIXEeZIakK1qUb_Te5cfduccI
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    value: ec2eat-davidyu-prod.firebaseapp.com
+    availability: [BUILD, RUNTIME]
   - variable: GEMINI_MODEL
     value: gemini-3.5-flash-lite
     availability: [RUNTIME]
   - variable: VERTEX_LOCATION
     value: global
     availability: [RUNTIME]
-# APP_ORIGIN, project/browser config and Secret Manager references must be
-# configured for the actual project before deployment. No resources created.
+  - variable: GEMINI_CONTEXT_ENABLED
+    value: "false"
+    availability: [RUNTIME]
+  - variable: PLACES_CONTENT_USE_APPROVED
+    value: "true"
+    availability: [RUNTIME]
+  - variable: GOOGLE_PLACES_API_KEY
+    secret: GOOGLE_PLACES_API_KEY@2
+    availability: [RUNTIME]
+  - variable: PLACES_MODEL_INPUT_APPROVED
+    value: "false"
+    availability: [RUNTIME]
+  - variable: GOOGLE_WEATHER_PERSIST_APPROVED
+    value: "false"
+    availability: [RUNTIME]
+# Firebase browser configuration is public; server secrets must use Secret Manager.
+# Places display/search enabled for initial live verification; model input stays off.
+# Calendar, Gemini, Weather and Laya still require their separate integration setup.

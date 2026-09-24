@@ -220,6 +220,7 @@ export function RestaurantResults({
                       referrerPolicy="no-referrer"
                     />
                     <p className="hint">
+                      <a href={card.photo.mapsUri} target="_blank" rel="noopener noreferrer">喺 Google Maps 睇原相</a>{" · "}
                       相片：
                       {card.photo.authors.map((a, i) =>
                         a.uri ? (

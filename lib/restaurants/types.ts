@@ -16,7 +16,7 @@ export const restaurantCardSchema = z.object({
   rating: z.number().min(0).max(5).nullable(),
   mapsUri: z.string().nullable(),
   photo: z
-    .object({ url: z.string(), authors: z.array(attributionSchema) })
+    .object({ url: z.string(), mapsUri: z.string(), authors: z.array(attributionSchema) })
     .nullable(),
   attributions: z.array(attributionSchema),
   available: z.boolean(),

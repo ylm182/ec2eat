@@ -132,6 +132,7 @@ describe("restaurant search and content boundaries", () => {
                   photos: [
                     {
                       name: "places/place-id/photos/photo-id",
+                  googleMapsUri: "https://www.google.com/maps/place/photo",
                       authorAttributions: [{ displayName: "Author" }],
                     },
                   ],
@@ -211,6 +212,7 @@ it("photo media is displayed only with a safe URL and its supplied author attrib
               photos: [
                 {
                   name: "places/place-id/photos/photo-id",
+                  googleMapsUri: "https://www.google.com/maps/place/photo",
                   authorAttributions: [
                     {
                       displayName: "Photographer",
@@ -229,8 +231,16 @@ it("photo media is displayed only with a safe URL and its supplied author attrib
   ).details("place-id", signal());
   expect(card.photo).toEqual({
     url: "https://lh3.googleusercontent.com/photo",
+    mapsUri: "https://www.google.com/maps/place/photo",
     authors: [
       { name: "Photographer", uri: "https://www.google.com/maps/contrib/123" },
     ],
   });
 });
+
+ it.each([undefined,"https://untrusted.test/photo"])("omits photos with missing or unsafe source links: %s", async (googleMapsUri) => {
+ let calls=0;
+ const transport=async()=>{calls++;return new Response(JSON.stringify({id:"place-id",photos:[{name:"places/place-id/photos/photo-id",googleMapsUri}]}));};
+ const card=await new GooglePlacesProvider("test-only",false,transport).details("place-id",signal());
+ expect(card.photo).toBeNull();expect(card.available).toBe(true);expect(calls).toBe(1);
+ });
