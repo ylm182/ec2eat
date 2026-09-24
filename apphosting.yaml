@@ -32,7 +32,7 @@ env:
     value: global
     availability: [ RUNTIME ]
   - variable: GEMINI_CONTEXT_ENABLED
-    value: "false"
+    value: "true"
     availability: [ RUNTIME ]
   - variable: OAUTH_CLIENT_ID
     value: 557108996706-08d9o7fmglef6e1kbuv9l3i2c8nec856.apps.googleusercontent.com
@@ -58,5 +58,6 @@ env:
 
 # Firebase browser configuration is public; server secrets must use Secret Manager.
 # Places display/search enabled for initial live verification; model input stays off.
-# Calendar configuration awaits KMS access, rollout and live verification.
-# Gemini, Weather and Laya still require their separate integration setup.
+# Calendar connection verified; event reading still needs live verification.
+# Gemini project/model smoke test passed; runtime integration awaits verification.
+# Weather and Laya still require their separate integration setup.
