@@ -1,0 +1,44 @@
+{
+  "name": "ec2eat",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --exclude tests/emulator.test.ts",
+    "test:emulator": "firebase emulators:exec --project demo-ec2eat --only auth,firestore 'vitest run tests/emulator.test.ts'",
+    "emulators": "firebase emulators:start --project demo-ec2eat --only auth,firestore",
+    "seed:emulator": "node --env-file=.env.example --import tsx scripts/seed-emulator.ts",
+    "check:client": "node scripts/check-client.mjs",
+    "dev:emulator": "node --env-file=.env.example node_modules/next/dist/bin/next dev"
+  },
+  "dependencies": {
+    "@react-spring/web": "9.5.5",
+    "firebase": "12.19.0",
+    "firebase-admin": "14.5.0",
+    "next": "15.5.26",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-tinder-card": "1.6.4",
+    "server-only": "0.0.1",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "5.0.0",
+    "@types/node": "22.20.4",
+    "@types/react": "18.3.31",
+    "@types/react-dom": "18.3.7",
+    "firebase-tools": "15.31.0",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3",
+    "vitest": "3.2.7"
+  },
+  "overrides": {
+    "postcss": "8.5.28"
+  }
+}

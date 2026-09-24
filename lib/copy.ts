@@ -1,0 +1,21 @@
+export const copy = {
+  tagline: "easy to eat · 香港",
+  title: "今日，食咩好？",
+  subtitle: "由你而家嘅心情開始，慢慢揀到啱食嗰間。",
+  decide: "幫我揀",
+  history: "睇返之前",
+  login: "用 Google 登入",
+  logout: "登出",
+  private: "你嘅私人搵食小幫手",
+  setup: "登入服務尚未設定。設定完成後，就可以用獲邀帳戶登入。",
+  foundation: "決策功能準備中",
+  foundationDetail: "下一步會加入幾條簡單問題，幫你縮窄選擇。",
+  account: {
+    label: "帳戶",
+    loading: "準備中…",
+    signingIn: "登入中…",
+    allowed: "已登入，可以安心留低自己嘅選擇。",
+    connectionFailed: "暫時未能連線，請登出後再試。",
+    signInFailed: "未能完成登入，請再試一次。",
+  },
+};

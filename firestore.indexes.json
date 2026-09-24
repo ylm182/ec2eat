@@ -1,0 +1,31 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "sessions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "selectedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "sessions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "outcome.status", "order": "ASCENDING" },
+        { "fieldPath": "outcome.eligibleAfter", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": [
+    { "collectionGroup": "sessions", "fieldPath": "questions", "indexes": [] },
+    { "collectionGroup": "sessions", "fieldPath": "answers", "indexes": [] },
+    {
+      "collectionGroup": "operations",
+      "fieldPath": "expiresAt",
+      "ttl": true,
+      "indexes": []
+    }
+  ]
+}

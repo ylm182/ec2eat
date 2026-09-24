@@ -1,0 +1,24 @@
+name: M1 checks
+on: [push, pull_request]
+jobs:
+  foundation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run test:emulator
+      - run: npm run build
+        env:
+          HF_TOKEN: EC2EAT_SECRET_CANARY_7f21
+          OAUTH_CLIENT_SECRET: EC2EAT_SECRET_CANARY_7f21
+      - run: npm run check:client

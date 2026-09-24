@@ -1,0 +1,67 @@
+import "server-only";
+import { ZodError, type ZodType } from "zod";
+import { serverConfig } from "./config";
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    public code: string,
+    message: string,
+    public retryable = false,
+  ) {
+    super(message);
+  }
+}
+export function requireOrigin(request: Request) {
+  if (
+    request.headers.get("origin") !== new URL(serverConfig().APP_ORIGIN).origin
+  )
+    throw new ApiError(403, "INVALID_ORIGIN", "要求來源不符。");
+}
+export async function parseBody<T>(
+  request: Request,
+  schema: ZodType<T>,
+): Promise<T> {
+  const raw = await request.text();
+  if (raw.length > 16384)
+    throw new ApiError(422, "INVALID_INPUT", "要求內容太長。");
+  try {
+    return schema.parse(JSON.parse(raw));
+  } catch {
+    throw new ApiError(422, "INVALID_INPUT", "要求內容不正確。");
+  }
+}
+export async function apiResponse(
+  run: () => Promise<unknown>,
+  requestId = crypto.randomUUID(),
+) {
+  const headers = {
+    "Cache-Control": "private, no-store",
+    Vary: "Authorization, Origin",
+  };
+  try {
+    return Response.json({ data: await run(), requestId }, { headers });
+  } catch (error) {
+    const safe =
+      error instanceof ApiError
+        ? error
+        : error instanceof ZodError
+          ? new ApiError(422, "INVALID_INPUT", "要求內容不正確。")
+          : new ApiError(
+              503,
+              "SERVICE_UNAVAILABLE",
+              "暫時未能連線，請稍後再試。",
+              true,
+            );
+    return Response.json(
+      {
+        error: {
+          code: safe.code,
+          message: safe.message,
+          retryable: safe.retryable,
+        },
+        requestId,
+      },
+      { status: safe.status, headers },
+    );
+  }
+}

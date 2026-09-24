@@ -1,0 +1,20 @@
+# Region is selected when creating the backend: asia-east1 (Taiwan).
+# Provision Firestore independently in asia-east2 (Hong Kong).
+runConfig:
+  minInstances: 0
+  maxInstances: 2
+  concurrency: 40
+  cpu: 1
+  memoryMiB: 512
+env:
+  - variable: APP_MODE
+    value: live
+    availability: [RUNTIME]
+  - variable: GEMINI_MODEL
+    value: gemini-3.5-flash-lite
+    availability: [RUNTIME]
+  - variable: VERTEX_LOCATION
+    value: global
+    availability: [RUNTIME]
+# APP_ORIGIN, project/browser config and Secret Manager references must be
+# configured for the actual project before deployment. No resources created.
