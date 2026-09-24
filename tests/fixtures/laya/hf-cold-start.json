@@ -1,0 +1,16 @@
+{
+  "date": "2026-09-25",
+  "endpoint": "https://6ab54d3c9ec415b652acb0c3.endpoints.huggingface.cloud",
+  "wrapperRevision": "1942f86f6f828e850a0e963bec0daf8c225e4113",
+  "repositoryPrivate": "confirmed by user",
+  "initialStatus": "Scaled to Zero, confirmed by user",
+  "anonymousStatus": 401,
+  "firstAuthenticatedStatus": 503,
+  "firstRequestSeconds": 1.18,
+  "finalStatus": "Running, confirmed by user and successful requests",
+  "subsequentAuthenticatedStatuses": [200, 200, 200, 200],
+  "subsequentRequestSeconds": [1.345, 1.282, 1.273, 1.412],
+  "executionLocation": "developer Mac, not Taiwan backend",
+  "coldStartDurationSeconds": null,
+  "notes": "An authenticated synthetic request initiated wake-up. Tests were retried after a wait; exact cold-start duration was not measured. Forced scale-to-zero was user initiated; automatic idle scale-down remains unverified. No tokens recorded."
+}

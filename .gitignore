@@ -9,3 +9,7 @@ coverage/
 
 functions/lib/
 functions/node_modules/
+
+# Python serving-handler development
+__pycache__/
+*.pyc

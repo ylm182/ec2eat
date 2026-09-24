@@ -59,7 +59,7 @@ Read-only provider contracts were checked against [Google Calendar events](https
 
 `npm --prefix functions ci` then `npm --prefix functions run build` verifies the separate Node 22 scheduled worker. CI runs this build. Firebase configuration references the `functions` source/codebase, but nothing is deployed by ordinary build/test commands. The worker shares the Next app's Firestore project and `internal/layaWarmup` / `internal/layaCircuit` documents. No additional index is needed; direct browser access remains denied.
 
-Follow `tests/fixtures/laya/README.md` before installing a real recipe. Set server-only `LAYA_BASE_URL` (protected HF origin), `LAYA_MODEL_REVISION` and `LAYA_RUNTIME_VERSION` to its verified values and supply `HF_TOKEN` through Secret Manager for both App Hosting and the scheduled worker. Environment variables alone cannot enable the null recipe. Deployment must verify scheduler service-account IAM and reject anonymous HTTP invocation; [Firebase scheduled functions](https://firebase.google.com/docs/functions/schedule-functions) create the associated job and invocation permissions. Do not manually expose a public worker. Keep the schedule in Taiwan, Firestore in Hong Kong, and HF replica/idle settings as explicitly verified in its control plane.
+Follow `tests/fixtures/laya/README.md` before installing a real recipe. Set server-only `LAYA_BASE_URL` (protected HF origin), `LAYA_MODEL_REVISION` and `LAYA_RUNTIME_VERSION` to its verified values and supply `HF_TOKEN` through Secret Manager for both App Hosting and the scheduled worker. The installed recipe validates the tested model/runtime and response contract; see docs/LAYA_DEPLOYMENT.md. Deployment must verify scheduler service-account IAM and reject anonymous HTTP invocation; [Firebase scheduled functions](https://firebase.google.com/docs/functions/schedule-functions) create the associated job and invocation permissions. Do not manually expose a public worker. Keep the schedule in Taiwan, Firestore in Hong Kong, and HF replica/idle settings as explicitly verified in its control plane.
 
 The warm-up input is a tiny synthetic two-candidate inference request passed through the installed recipe; readiness is not assumed from a generic health ping. The installed recipe's live fixture must verify that input. Scheduled 11:00/17:00 calls do not guarantee lunch/dinner readiness after idle scale-down; app-open warm-up and fallback remain required. No continuous keep-alive or model upgrade is added.
 
@@ -116,3 +116,22 @@ Affected `restaurantRelations/{placeId}` records are recomputed from matching ca
 `POST /api/sessions/:sessionId/delete` accepts `{confirm:true,expectedRevision}`; `POST /api/account/delete` accepts `{confirm:"DELETE"}`. Both require verified Google allowlist access and exact Origin. Session tombstones override replay and recreation. Account deletion fences all app/OAuth writers before erasing records and is resumable through the same route. Browser deletion controls require an explicit confirmation; implementation tests use isolated disposable identities. Administrator access-control/deletion markers remain, and account reactivation is deliberate. See [release readiness](M9_RELEASE.md) for retention, revocation, index, rollback and billing details, and [user-run frontend scenarios](M9_FRONTEND_TESTS.md).
 
 Search/ranking now has a 10-second work deadline instead of M6's 12 seconds. Real Calendar token/event acquisition has a two-second shared deadline, with the existing optional four-second Gemini phase inside a 6.5-second combined context envelope. Weather stays two seconds. Firestore and client-network latency still need real Hong Kong-device measurement. Structured telemetry excludes raw user/provider payloads. `npm run check:release` checks local declarations; `npm run check:release -- --live` reports missing real configuration/evidence and currently must fail. Cloud log retention, alarms, spend limits/alerts and actual service regions are operator provisioning gates, never inferred from local test success.
+
+### Production Laya preparation — 2026-09-25
+
+The candidate HF Inference Toolkit wrapper is in `deploy/laya/` (see its README).
+It pins the multilingual checkpoint and runtime, uses CPU, validates all returned
+candidate scores and rejects oversized inputs. Five isolated handler tests passed;
+real local English/Traditional Chinese inference returned complete score vectors.
+This is local evidence, **not a verified HF endpoint contract**. The application
+recipe remains null and deterministic fallback remains enabled. Next upload the
+wrapper's three serving files to an owned HF model repo, pin that repo commit,
+then verify custom-handler startup and authenticated synthetic inference on HF.
+No endpoint was created by this work. The user's production HF token is already
+in Secret Manager; do not grant it repository-write permissions for uploading.
+
+2026-09-25 HF endpoint smoke update: v2 endpoint authenticated synthetic scoring
+passed in four cases and anonymous access was rejected (401). See
+`tests/fixtures/laya/hf-smoke.json`. Request times from the developer Mac were
+1.31–1.49 seconds. No Firebase runtime configuration was enabled by this check;
+private-repo cold start, Taiwan execution, and app recipe/warm-up remain pending.

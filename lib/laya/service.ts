@@ -89,7 +89,7 @@ export class LayaService {
       } catch (error) {
         reason =
           error instanceof LayaFailure ? error.reason : "laya_invalid_output";
-        if (reason !== "laya_circuit_open")
+        if (reason !== "laya_circuit_open" && reason !== "laya_no_preference_evidence")
           await deadline(150, () => this.store.record(false, Date.now())).catch(
             () => {},
           );

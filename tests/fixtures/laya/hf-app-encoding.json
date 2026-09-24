@@ -1,0 +1,1025 @@
+{
+  "executionLocation": "developer Mac",
+  "cases": [
+    {
+      "input": {
+        "version": 1,
+        "stage": "archetype",
+        "candidates": [
+          {
+            "id": "casual-noodles",
+            "features": {
+              "richness": {
+                "value": 0.4,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "spiciness": {
+                "value": 0.2,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "speed": {
+                "value": 0.8,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "formality": {
+                "value": 0.2,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "comfort": {
+                "value": 0.3,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "healthiness": {
+                "value": 0.5,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "temperature": {
+                "value": 0.9,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "social": {
+                "value": 0.2,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "price": {
+                "value": 0.25,
+                "confidence": 0.6,
+                "source": "rule"
+              }
+            },
+            "categoryId": "noodles"
+          },
+          {
+            "id": "curry-rice",
+            "features": {
+              "richness": {
+                "value": 0.8,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "spiciness": {
+                "value": 0.6,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "speed": {
+                "value": 0.7,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "formality": {
+                "value": 0.2,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "comfort": {
+                "value": 0.5,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "healthiness": {
+                "value": 0.3,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "temperature": {
+                "value": 0.9,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "social": {
+                "value": 0.2,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "price": {
+                "value": 0.4,
+                "confidence": 0.6,
+                "source": "rule"
+              }
+            },
+            "categoryId": "rice"
+          },
+          {
+            "id": "light-salad",
+            "features": {
+              "richness": {
+                "value": 0.15,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "spiciness": {
+                "value": 0.1,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "speed": {
+                "value": 0.8,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "formality": {
+                "value": 0.3,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "comfort": {
+                "value": 0.3,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "healthiness": {
+                "value": 0.85,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "temperature": {
+                "value": 0.15,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "social": {
+                "value": 0.2,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "price": {
+                "value": 0.45,
+                "confidence": 0.6,
+                "source": "rule"
+              }
+            },
+            "categoryId": "salad"
+          },
+          {
+            "id": "ramen",
+            "features": {
+              "richness": {
+                "value": 0.85,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "spiciness": {
+                "value": 0.3,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "speed": {
+                "value": 0.6,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "formality": {
+                "value": 0.3,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "comfort": {
+                "value": 0.6,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "healthiness": {
+                "value": 0.3,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "temperature": {
+                "value": 0.9,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "social": {
+                "value": 0.2,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "price": {
+                "value": 0.55,
+                "confidence": 0.6,
+                "source": "rule"
+              }
+            },
+            "categoryId": "noodles"
+          },
+          {
+            "id": "rice-bowl",
+            "features": {
+              "richness": {
+                "value": 0.5,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "spiciness": {
+                "value": 0.2,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "speed": {
+                "value": 0.85,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "formality": {
+                "value": 0.2,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "comfort": {
+                "value": 0.4,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "healthiness": {
+                "value": 0.55,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "temperature": {
+                "value": 0.8,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "social": {
+                "value": 0.2,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "price": {
+                "value": 0.35,
+                "confidence": 0.6,
+                "source": "rule"
+              }
+            },
+            "categoryId": "rice"
+          },
+          {
+            "id": "shared-hotpot",
+            "features": {
+              "richness": {
+                "value": 0.7,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "spiciness": {
+                "value": 0.5,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "speed": {
+                "value": 0.15,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "formality": {
+                "value": 0.4,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "comfort": {
+                "value": 0.85,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "healthiness": {
+                "value": 0.45,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "temperature": {
+                "value": 0.95,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "social": {
+                "value": 0.9,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "price": {
+                "value": 0.8,
+                "confidence": 0.6,
+                "source": "rule"
+              }
+            },
+            "categoryId": "soup"
+          },
+          {
+            "id": "soup-meal",
+            "features": {
+              "richness": {
+                "value": 0.25,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "spiciness": {
+                "value": 0.1,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "speed": {
+                "value": 0.65,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "formality": {
+                "value": 0.2,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "comfort": {
+                "value": 0.4,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "healthiness": {
+                "value": 0.65,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "temperature": {
+                "value": 0.95,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "social": {
+                "value": 0.25,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "price": {
+                "value": 0.35,
+                "confidence": 0.6,
+                "source": "rule"
+              }
+            },
+            "categoryId": "soup"
+          }
+        ],
+        "preferences": {
+          "richness": {
+            "state": "unknown",
+            "value": null,
+            "strength": 0
+          },
+          "spiciness": {
+            "state": "unknown",
+            "value": null,
+            "strength": 0
+          },
+          "novelty": {
+            "state": "unknown",
+            "value": null,
+            "strength": 0
+          },
+          "speed": {
+            "state": "answered",
+            "value": 0.8,
+            "strength": 1
+          },
+          "formality": {
+            "state": "unknown",
+            "value": null,
+            "strength": 0
+          },
+          "comfort": {
+            "state": "unknown",
+            "value": null,
+            "strength": 0
+          },
+          "healthiness": {
+            "state": "unknown",
+            "value": null,
+            "strength": 0
+          },
+          "temperature": {
+            "state": "unknown",
+            "value": null,
+            "strength": 0
+          },
+          "social": {
+            "state": "unknown",
+            "value": null,
+            "strength": 0
+          },
+          "distanceTolerance": {
+            "state": "unknown",
+            "value": null,
+            "strength": 0
+          },
+          "price": {
+            "state": "unknown",
+            "value": null,
+            "strength": 0
+          }
+        },
+        "priors": {},
+        "context": {
+          "rain": null,
+          "nextEventSoon": null
+        }
+      },
+      "request": {
+        "path": "/",
+        "body": {
+          "inputs": {
+            "state": "Match explicit preferences first. Values 0..1; 1 means:\nspeed=fast\nMissing=?; neutral=no preference, never fill from priors. Candidate rows use the dimension order above; each value@confidence.\nspeed: explicit=0.8 strength=1\nneutral: none; other dimensions unknown.\nWeak context: rain=unknown, nextEventSoon=unknown.",
+            "candidates": [
+              {
+                "id": "casual-noodles",
+                "description": "category=noodles,0.8@0.6"
+              },
+              {
+                "id": "curry-rice",
+                "description": "category=rice,0.7@0.6"
+              },
+              {
+                "id": "light-salad",
+                "description": "category=salad,0.8@0.6"
+              },
+              {
+                "id": "ramen",
+                "description": "category=noodles,0.6@0.6"
+              },
+              {
+                "id": "rice-bowl",
+                "description": "category=rice,0.85@0.6"
+              },
+              {
+                "id": "shared-hotpot",
+                "description": "category=soup,0.15@0.6"
+              },
+              {
+                "id": "soup-meal",
+                "description": "category=soup,0.65@0.6"
+              }
+            ]
+          }
+        }
+      },
+      "response": {
+        "contract": "ec2eat-laya-choice-v1",
+        "model": "convaiinnovations/laya-multilingual",
+        "modelRevision": "e4e9ddf21a7b1903b7acffd8814ad4307bf63a67",
+        "runtimeVersion": "laya==0.3.20",
+        "entries": [
+          {
+            "id": "casual-noodles",
+            "score": 0.2346,
+            "weight": 0.2346
+          },
+          {
+            "id": "curry-rice",
+            "score": 0.028,
+            "weight": 0.028
+          },
+          {
+            "id": "light-salad",
+            "score": 0.0123,
+            "weight": 0.0123
+          },
+          {
+            "id": "ramen",
+            "score": 0.0584,
+            "weight": 0.0584
+          },
+          {
+            "id": "rice-bowl",
+            "score": 0.0081,
+            "weight": 0.0081
+          },
+          {
+            "id": "shared-hotpot",
+            "score": 0.013,
+            "weight": 0.013
+          },
+          {
+            "id": "soup-meal",
+            "score": 0.6456,
+            "weight": 0.6456
+          }
+        ],
+        "confidence": null
+      },
+      "latencyMs": 1528
+    },
+    {
+      "input": {
+        "version": 1,
+        "stage": "archetype",
+        "candidates": [
+          {
+            "id": "casual-noodles",
+            "features": {
+              "richness": {
+                "value": 0.4,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "spiciness": {
+                "value": 0.2,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "speed": {
+                "value": 0.8,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "formality": {
+                "value": 0.2,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "comfort": {
+                "value": 0.3,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "healthiness": {
+                "value": 0.5,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "temperature": {
+                "value": 0.9,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "social": {
+                "value": 0.2,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "price": {
+                "value": 0.25,
+                "confidence": 0.6,
+                "source": "rule"
+              }
+            },
+            "categoryId": "noodles"
+          },
+          {
+            "id": "curry-rice",
+            "features": {
+              "richness": {
+                "value": 0.8,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "spiciness": {
+                "value": 0.6,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "speed": {
+                "value": 0.7,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "formality": {
+                "value": 0.2,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "comfort": {
+                "value": 0.5,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "healthiness": {
+                "value": 0.3,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "temperature": {
+                "value": 0.9,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "social": {
+                "value": 0.2,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "price": {
+                "value": 0.4,
+                "confidence": 0.6,
+                "source": "rule"
+              }
+            },
+            "categoryId": "rice"
+          },
+          {
+            "id": "light-salad",
+            "features": {
+              "richness": {
+                "value": 0.15,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "spiciness": {
+                "value": 0.1,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "speed": {
+                "value": 0.8,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "formality": {
+                "value": 0.3,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "comfort": {
+                "value": 0.3,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "healthiness": {
+                "value": 0.85,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "temperature": {
+                "value": 0.15,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "social": {
+                "value": 0.2,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "price": {
+                "value": 0.45,
+                "confidence": 0.6,
+                "source": "rule"
+              }
+            },
+            "categoryId": "salad"
+          },
+          {
+            "id": "ramen",
+            "features": {
+              "richness": {
+                "value": 0.85,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "spiciness": {
+                "value": 0.3,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "speed": {
+                "value": 0.6,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "formality": {
+                "value": 0.3,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "comfort": {
+                "value": 0.6,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "healthiness": {
+                "value": 0.3,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "temperature": {
+                "value": 0.9,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "social": {
+                "value": 0.2,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "price": {
+                "value": 0.55,
+                "confidence": 0.6,
+                "source": "rule"
+              }
+            },
+            "categoryId": "noodles"
+          },
+          {
+            "id": "rice-bowl",
+            "features": {
+              "richness": {
+                "value": 0.5,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "spiciness": {
+                "value": 0.2,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "speed": {
+                "value": 0.85,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "formality": {
+                "value": 0.2,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "comfort": {
+                "value": 0.4,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "healthiness": {
+                "value": 0.55,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "temperature": {
+                "value": 0.8,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "social": {
+                "value": 0.2,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "price": {
+                "value": 0.35,
+                "confidence": 0.6,
+                "source": "rule"
+              }
+            },
+            "categoryId": "rice"
+          },
+          {
+            "id": "shared-hotpot",
+            "features": {
+              "richness": {
+                "value": 0.7,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "spiciness": {
+                "value": 0.5,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "speed": {
+                "value": 0.15,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "formality": {
+                "value": 0.4,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "comfort": {
+                "value": 0.85,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "healthiness": {
+                "value": 0.45,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "temperature": {
+                "value": 0.95,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "social": {
+                "value": 0.9,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "price": {
+                "value": 0.8,
+                "confidence": 0.6,
+                "source": "rule"
+              }
+            },
+            "categoryId": "soup"
+          },
+          {
+            "id": "soup-meal",
+            "features": {
+              "richness": {
+                "value": 0.25,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "spiciness": {
+                "value": 0.1,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "speed": {
+                "value": 0.65,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "formality": {
+                "value": 0.2,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "comfort": {
+                "value": 0.4,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "healthiness": {
+                "value": 0.65,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "temperature": {
+                "value": 0.95,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "social": {
+                "value": 0.25,
+                "confidence": 0.6,
+                "source": "rule"
+              },
+              "price": {
+                "value": 0.35,
+                "confidence": 0.6,
+                "source": "rule"
+              }
+            },
+            "categoryId": "soup"
+          }
+        ],
+        "preferences": {
+          "richness": {
+            "state": "answered",
+            "value": 0.2,
+            "strength": 1
+          },
+          "spiciness": {
+            "state": "answered",
+            "value": 0.2,
+            "strength": 1
+          },
+          "novelty": {
+            "state": "unknown",
+            "value": null,
+            "strength": 0
+          },
+          "speed": {
+            "state": "answered",
+            "value": 0.8,
+            "strength": 1
+          },
+          "formality": {
+            "state": "unknown",
+            "value": null,
+            "strength": 0
+          },
+          "comfort": {
+            "state": "unknown",
+            "value": null,
+            "strength": 0
+          },
+          "healthiness": {
+            "state": "answered",
+            "value": 0.8,
+            "strength": 1
+          },
+          "temperature": {
+            "state": "unknown",
+            "value": null,
+            "strength": 0
+          },
+          "social": {
+            "state": "answered",
+            "value": 0.2,
+            "strength": 1
+          },
+          "distanceTolerance": {
+            "state": "unknown",
+            "value": null,
+            "strength": 0
+          },
+          "price": {
+            "state": "answered",
+            "value": 0.2,
+            "strength": 1
+          }
+        },
+        "priors": {},
+        "context": {
+          "rain": null,
+          "nextEventSoon": null
+        }
+      },
+      "request": {
+        "path": "/",
+        "body": {
+          "inputs": {
+            "state": "Match explicit preferences first. Values 0..1; 1 means:\nrichness=rich,spiciness=spicy,speed=fast,healthiness=healthy,social=sharing,price=expensive\nMissing=?; neutral=no preference, never fill from priors. Candidate rows use the dimension order above; each value@confidence.\nrichness: explicit=0.2 strength=1\nspiciness: explicit=0.2 strength=1\nspeed: explicit=0.8 strength=1\nhealthiness: explicit=0.8 strength=1\nsocial: explicit=0.2 strength=1\nprice: explicit=0.2 strength=1\nneutral: none; other dimensions unknown.\nPrice is a budget ceiling; cheaper is acceptable.\nWeak context: rain=unknown, nextEventSoon=unknown.",
+            "candidates": [
+              {
+                "id": "casual-noodles",
+                "description": "category=noodles,0.4@0.6,0.2@0.6,0.8@0.6,0.5@0.6,0.2@0.6,0.25@0.6"
+              },
+              {
+                "id": "curry-rice",
+                "description": "category=rice,0.8@0.6,0.6@0.6,0.7@0.6,0.3@0.6,0.2@0.6,0.4@0.6"
+              },
+              {
+                "id": "light-salad",
+                "description": "category=salad,0.15@0.6,0.1@0.6,0.8@0.6,0.85@0.6,0.2@0.6,0.45@0.6"
+              },
+              {
+                "id": "ramen",
+                "description": "category=noodles,0.85@0.6,0.3@0.6,0.6@0.6,0.3@0.6,0.2@0.6,0.55@0.6"
+              },
+              {
+                "id": "rice-bowl",
+                "description": "category=rice,0.5@0.6,0.2@0.6,0.85@0.6,0.55@0.6,0.2@0.6,0.35@0.6"
+              },
+              {
+                "id": "shared-hotpot",
+                "description": "category=soup,0.7@0.6,0.5@0.6,0.15@0.6,0.45@0.6,0.9@0.6,0.8@0.6"
+              },
+              {
+                "id": "soup-meal",
+                "description": "category=soup,0.25@0.6,0.1@0.6,0.65@0.6,0.65@0.6,0.25@0.6,0.35@0.6"
+              }
+            ]
+          }
+        }
+      },
+      "response": {
+        "contract": "ec2eat-laya-choice-v1",
+        "model": "convaiinnovations/laya-multilingual",
+        "modelRevision": "e4e9ddf21a7b1903b7acffd8814ad4307bf63a67",
+        "runtimeVersion": "laya==0.3.20",
+        "entries": [
+          {
+            "id": "casual-noodles",
+            "score": 0.0036,
+            "weight": 0.0036
+          },
+          {
+            "id": "curry-rice",
+            "score": 0.0024,
+            "weight": 0.0024
+          },
+          {
+            "id": "light-salad",
+            "score": 0.0018,
+            "weight": 0.0018
+          },
+          {
+            "id": "ramen",
+            "score": 0.8484,
+            "weight": 0.8484
+          },
+          {
+            "id": "rice-bowl",
+            "score": 0.0721,
+            "weight": 0.0721
+          },
+          {
+            "id": "shared-hotpot",
+            "score": 0.0556,
+            "weight": 0.0556
+          },
+          {
+            "id": "soup-meal",
+            "score": 0.0161,
+            "weight": 0.0161
+          }
+        ],
+        "confidence": null
+      },
+      "latencyMs": 1978
+    }
+  ]
+}

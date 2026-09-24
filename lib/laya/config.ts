@@ -39,7 +39,7 @@ export function layaConfiguration(env: Record<string, string | undefined>): {
               },
             },
           ],
-          preferences: unknownPreferences(),
+          preferences: { ...unknownPreferences(), speed: { state: "answered", value: 0.8, strength: 1 } },
           priors: {},
           context: { rain: null, nextEventSoon: null },
         },

@@ -55,9 +55,23 @@ env:
   - variable: CALENDAR_KMS_KEY
     value: projects/ec2eat-davidyu-prod/locations/asia-east2/keyRings/ec2eat/cryptoKeys/calendar-tokens
     availability: [ RUNTIME ]
+  - variable: HF_TOKEN
+    secret: HF_TOKEN@1
+    availability: [ RUNTIME ]
+
+  - variable: LAYA_BASE_URL
+    value: https://6ab54d3c9ec415b652acb0c3.endpoints.huggingface.cloud
+    availability: [ RUNTIME ]
+  - variable: LAYA_MODEL_REVISION
+    value: e4e9ddf21a7b1903b7acffd8814ad4307bf63a67
+    availability: [ RUNTIME ]
+  - variable: LAYA_RUNTIME_VERSION
+    value: laya==0.3.20
+    availability: [ RUNTIME ]
 
 # Firebase browser configuration is public; server secrets must use Secret Manager.
 # Places display/search enabled for initial live verification; model input stays off.
 # Calendar connection verified; event reading still needs live verification.
 # Gemini project/model smoke test passed; runtime integration awaits verification.
-# Weather and Laya still require their separate integration setup.
+# Laya contract/private-repo wake verified; production latency and scheduler verification pending.
+# Weather still requires separate integration setup.

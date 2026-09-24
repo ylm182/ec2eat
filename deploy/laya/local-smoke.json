@@ -1,0 +1,213 @@
+[
+  {
+    "request": {
+      "inputs": {
+        "state": "I explicitly prefer a quick, inexpensive, mild lunch.",
+        "candidates": [
+          {
+            "id": "quick",
+            "description": "Quick service, inexpensive, mild food."
+          },
+          {
+            "id": "formal",
+            "description": "Slow formal dinner, expensive, spicy food."
+          }
+        ]
+      }
+    },
+    "response": {
+      "contract": "ec2eat-laya-choice-v1",
+      "model": "convaiinnovations/laya-multilingual",
+      "modelRevision": "e4e9ddf21a7b1903b7acffd8814ad4307bf63a67",
+      "runtimeVersion": "laya==0.3.20",
+      "entries": [
+        {
+          "id": "quick",
+          "score": 0.6673,
+          "weight": 0.6673
+        },
+        {
+          "id": "formal",
+          "score": 0.3327,
+          "weight": 0.3327
+        }
+      ],
+      "confidence": null
+    },
+    "seconds": 0.07951270799821941
+  },
+  {
+    "request": {
+      "inputs": {
+        "state": "我想食平價、清淡、快啲食完嘅午餐。",
+        "candidates": [
+          {
+            "id": "quick",
+            "description": "平價，清淡，快速上菜。"
+          },
+          {
+            "id": "formal",
+            "description": "昂貴正式晚餐，辣味，需要長時間用餐。"
+          }
+        ]
+      }
+    },
+    "response": {
+      "contract": "ec2eat-laya-choice-v1",
+      "model": "convaiinnovations/laya-multilingual",
+      "modelRevision": "e4e9ddf21a7b1903b7acffd8814ad4307bf63a67",
+      "runtimeVersion": "laya==0.3.20",
+      "entries": [
+        {
+          "id": "quick",
+          "score": 0.7423,
+          "weight": 0.7423
+        },
+        {
+          "id": "formal",
+          "score": 0.2577,
+          "weight": 0.2577
+        }
+      ],
+      "confidence": null
+    },
+    "seconds": 0.0460248750023311
+  },
+  {
+    "request": {
+      "inputs": {
+        "state": "A quick lunch.",
+        "candidates": [
+          {
+            "id": "only",
+            "description": "A quick lunch."
+          }
+        ]
+      }
+    },
+    "response": {
+      "contract": "ec2eat-laya-choice-v1",
+      "model": "convaiinnovations/laya-multilingual",
+      "modelRevision": "e4e9ddf21a7b1903b7acffd8814ad4307bf63a67",
+      "runtimeVersion": "laya==0.3.20",
+      "entries": [
+        {
+          "id": "only",
+          "score": 1.0,
+          "weight": 1.0
+        }
+      ],
+      "confidence": null
+    },
+    "seconds": 0.033256832997722086
+  },
+  {
+    "request": {
+      "inputs": {
+        "state": "Prefer mild food.",
+        "candidates": [
+          {
+            "id": "candidate_0",
+            "description": "Mild noodles."
+          },
+          {
+            "id": "candidate_1",
+            "description": "Spicy noodles."
+          },
+          {
+            "id": "candidate_2",
+            "description": "Spicy noodles."
+          },
+          {
+            "id": "candidate_3",
+            "description": "Spicy noodles."
+          },
+          {
+            "id": "candidate_4",
+            "description": "Spicy noodles."
+          },
+          {
+            "id": "candidate_5",
+            "description": "Spicy noodles."
+          },
+          {
+            "id": "candidate_6",
+            "description": "Spicy noodles."
+          },
+          {
+            "id": "candidate_7",
+            "description": "Spicy noodles."
+          },
+          {
+            "id": "candidate_8",
+            "description": "Spicy noodles."
+          },
+          {
+            "id": "candidate_9",
+            "description": "Spicy noodles."
+          }
+        ]
+      }
+    },
+    "response": {
+      "contract": "ec2eat-laya-choice-v1",
+      "model": "convaiinnovations/laya-multilingual",
+      "modelRevision": "e4e9ddf21a7b1903b7acffd8814ad4307bf63a67",
+      "runtimeVersion": "laya==0.3.20",
+      "entries": [
+        {
+          "id": "candidate_0",
+          "score": 0.5961,
+          "weight": 0.5961
+        },
+        {
+          "id": "candidate_1",
+          "score": 0.022,
+          "weight": 0.022
+        },
+        {
+          "id": "candidate_2",
+          "score": 0.0678,
+          "weight": 0.0678
+        },
+        {
+          "id": "candidate_3",
+          "score": 0.0259,
+          "weight": 0.0259
+        },
+        {
+          "id": "candidate_4",
+          "score": 0.0139,
+          "weight": 0.0139
+        },
+        {
+          "id": "candidate_5",
+          "score": 0.0219,
+          "weight": 0.0219
+        },
+        {
+          "id": "candidate_6",
+          "score": 0.0162,
+          "weight": 0.0162
+        },
+        {
+          "id": "candidate_7",
+          "score": 0.0181,
+          "weight": 0.0181
+        },
+        {
+          "id": "candidate_8",
+          "score": 0.198,
+          "weight": 0.198
+        },
+        {
+          "id": "candidate_9",
+          "score": 0.0201,
+          "weight": 0.0201
+        }
+      ],
+      "confidence": null
+    },
+    "seconds": 0.06175416699989
+  }
+]
