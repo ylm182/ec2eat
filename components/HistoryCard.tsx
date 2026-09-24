@@ -1,4 +1,5 @@
 "use client";
+import { OutcomeForm } from "./OutcomeForm";
 import { useEffect, useId, useRef, useState } from "react";
 import { z } from "zod";
 import { authorizedJson } from "@/lib/client/decision-api";
@@ -110,6 +111,20 @@ export function HistoryCard({
             {s.outcome.confirmedAt && (
               <p>確認時間：{hongKongTime(s.outcome.confirmedAt)}（香港時間）</p>
             )}
+            {s.outcome.status === "PENDING" && s.outcome.snoozedUntil && (
+              <p className="hint">
+                自動提醒已暫停至 {hongKongTime(s.outcome.snoozedUntil)}
+                （香港時間）之後另一次開啟。你仍可以喺歷史自行確認。
+              </p>
+            )}
+            <details className="history-outcome-editor">
+              <summary>
+                {s.outcome.status === "PENDING"
+                  ? "確認用餐結果"
+                  : "更正用餐結果"}
+              </summary>
+              <OutcomeForm uid={uid} session={s} />
+            </details>
             <section aria-label="目前餐廳資料">
               <h3>目前餐廳資料</h3>
               <p className="hint">名稱、相片及營業狀態會更新，唔係當日快照。</p>

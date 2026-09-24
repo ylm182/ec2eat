@@ -32,6 +32,10 @@ export default function Privacy() {
         及 <a href="https://policies.google.com/privacy">Google 私隱政策</a>
         。Google、Hugging Face 等外部服務處理地區可能唔同於香港資料庫。
       </p>
+      <p>
+        用餐結果只喺你確認後儲存，亦可以喺歷史更正。「遲啲先」只暫停提醒，唔代表沒有到訪。你可以選擇搜尋實際去咗嘅餐廳；搜尋字眼會短暫交畀
+        Google Places，唔會保留原文，只保留選中嘅餐廳編號及用餐結果。
+      </p>
     </article>
   );
 }

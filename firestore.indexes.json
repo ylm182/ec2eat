@@ -31,6 +31,24 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "sessions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "outcome.status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "selectedAt",
+          "order": "DESCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": [
@@ -75,6 +93,12 @@
     {
       "collectionGroup": "restaurantOperations",
       "fieldPath": "response",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "actualLookups",
+      "fieldPath": "expiresAt",
+      "ttl": true,
       "indexes": []
     }
   ]

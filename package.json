@@ -15,7 +15,8 @@
     "emulators": "firebase emulators:start --project demo-ec2eat --only auth,firestore",
     "seed:emulator": "node --env-file=.env.example --import tsx scripts/seed-emulator.ts",
     "check:client": "node scripts/check-client.mjs",
-    "dev:emulator": "node --env-file=.env.example node_modules/next/dist/bin/next dev"
+    "dev:emulator": "node --env-file=.env.example node_modules/next/dist/bin/next dev",
+    "seed:outcomes:emulator": "node --env-file=.env.example --import tsx scripts/seed-outcomes-emulator.ts"
   },
   "dependencies": {
     "@react-spring/web": "9.5.5",

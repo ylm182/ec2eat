@@ -1140,3 +1140,385 @@ describe("M7 selected-session history", () => {
     ).toBe(403);
   });
 });
+
+describe("M8 delayed outcomes and corrections", () => {
+  const eligible = Date.parse("2026-09-24T08:00:00.000Z");
+  async function setup(name: string) {
+    const identity = await googleToken(name);
+    const { db } = adminServices();
+    await db.doc("allowedUsers/" + identity.uid).set({ enabled: true });
+    const user = await authenticate(request(identity.token));
+    const { selectedFixture } = await import("./fixtures");
+    const s = selectedFixture();
+    s.uid = user.uid;
+    s.id = "saved";
+    s.context.area = "中環";
+    s.search = {
+      radiusM: 1500,
+      result: "ready",
+      expanded: false,
+      source: "synthetic",
+      centreSource: "manual",
+    };
+    await db
+      .doc("users/" + user.uid + "/sessions/saved")
+      .set(encodeDocument(s) as Record<string, unknown>);
+    let now = eligible;
+    const clock = () => now;
+    const { outcomeRepository } = await import("../lib/server/outcomes");
+    return {
+      identity,
+      db,
+      user,
+      s,
+      repo: outcomeRepository(db, user, clock),
+      clock,
+      setTime: (v: number) => {
+        now = v;
+      },
+    };
+  }
+  const body = (
+    s: ReturnType<typeof sessionFixture>,
+    requestId: string,
+    status?: string,
+  ) => ({
+    requestId,
+    launchId: "later",
+    expectedRevision: s.revision,
+    expectedOutcomeRevision: s.outcome.revision,
+    ...(status ? { status } : { snooze: true }),
+  });
+  it("never prompts or confirms immediately or in the selecting launch; an empty opening stays empty as time passes", async () => {
+    const { repo, s, setTime, db, user } = await setup("outcome-boundary");
+    setTime(eligible - 1);
+    expect(
+      (await repo.open({ requestId: "early", launchId: "early" })).session,
+    ).toBeNull();
+    await expect(
+      repo.save(s.id, body(s, "too-early", "VISITED_SELECTED")),
+    ).rejects.toMatchObject({ code: "OUTCOME_NOT_ELIGIBLE" });
+    setTime(eligible);
+    expect(
+      (await repo.open({ requestId: "early", launchId: "early" })).session,
+    ).toBeNull();
+    expect(
+      (
+        await repo.open({
+          requestId: "select-launch",
+          launchId: s.selectionLaunchId!,
+        })
+      ).session,
+    ).toBeNull();
+    await expect(
+      repo.save(s.id, {
+        ...body(s, "same-opening", "VISITED_SELECTED"),
+        launchId: s.selectionLaunchId!,
+      }),
+    ).rejects.toMatchObject({ code: "OUTCOME_NOT_ELIGIBLE" });
+    const opened = await repo.open({ requestId: "open", launchId: "later" });
+    expect(opened.session?.id).toBe(s.id);
+    expect(opened.session?.outcome.status).toBe("PENDING");
+    expect(await repo.open({ requestId: "open", launchId: "later" })).toEqual(
+      opened,
+    );
+    await db
+      .doc("users/" + user.uid + "/limits/outcomes")
+      .set({ hour: Math.floor(eligible / 3600000), opens: 60, mutations: 0 });
+    await expect(
+      repo.open({ requestId: "extra-alias", launchId: "later" }),
+    ).rejects.toMatchObject({ code: "RATE_LIMITED" });
+    expect(await repo.open({ requestId: "open", launchId: "later" })).toEqual(
+      opened,
+    );
+  });
+  it("skip is pending, exactly 24 hours, replay-safe, and never re-prompts in the skipping opening", async () => {
+    const { repo, setTime } = await setup("outcome-snooze");
+    const opened = (await repo.open({ requestId: "open", launchId: "later" }))
+      .session!;
+    const input = body(opened, "skip");
+    const skipped = await repo.save(opened.id, input);
+    expect(skipped.outcome.status).toBe("PENDING");
+    expect(skipped.outcome.actualPlaceId).toBeNull();
+    expect(skipped.outcome.confirmedAt).toBeNull();
+    expect(Date.parse(skipped.outcome.snoozedUntil!)).toBe(eligible + 86400000);
+    setTime(eligible + 86399999);
+    expect(
+      (await repo.open({ requestId: "before-day", launchId: "before-day" }))
+        .session,
+    ).toBeNull();
+    setTime(eligible + 86400000);
+    expect(await repo.save(opened.id, input)).toEqual(skipped);
+    expect(
+      (await repo.open({ requestId: "open", launchId: "later" })).session,
+    ).toBeNull();
+    expect(
+      (await repo.open({ requestId: "after-day", launchId: "after-day" }))
+        .session?.id,
+    ).toBe(opened.id);
+  });
+  it("chooses newest eligible pending through snoozed rows and claims no second prompt in one opening", async () => {
+    const { db, user, s, repo } = await setup("outcome-most-recent");
+    for (let i = 1; i <= 22; i++) {
+      const newer = structuredClone(s);
+      newer.id = "snoozed-" + i;
+      newer.selectedAt = new Date(Date.parse(s.selectedAt!) + i).toISOString();
+      newer.outcome.eligibleAfter = new Date(eligible + i).toISOString();
+      newer.outcome.snoozedUntil = new Date(eligible + 86400000).toISOString();
+      await db
+        .doc("users/" + user.uid + "/sessions/" + newer.id)
+        .set(encodeDocument(newer) as Record<string, unknown>);
+    }
+    const { outcomeRepository } = await import("../lib/server/outcomes");
+    const later = outcomeRepository(db, user, () => eligible + 1000);
+    const open = (await later.open({ requestId: "open", launchId: "later" }))
+      .session!;
+    expect(open.id).toBe("saved");
+    const confirmed = await later.save(
+      open.id,
+      body(open, "confirm", "VISITED_SELECTED"),
+    );
+    expect(confirmed.outcome.actualPlaceId).toBe(s.decision.selectedPlaceId);
+    expect(
+      (await later.open({ requestId: "again", launchId: "later" })).session,
+    ).toBeNull();
+    expect(
+      (await repo.open({ requestId: "different-empty", launchId: "other" }))
+        .session,
+    ).toBeNull();
+  });
+  it("cross-tab duplicates and competing corrections cannot double-apply or change frozen evidence", async () => {
+    const { repo, s, db, user } = await setup("outcome-races");
+    const first = (await repo.open({ requestId: "open-a", launchId: "a" }))
+      .session!;
+    const second = (await repo.open({ requestId: "open-b", launchId: "b" }))
+      .session!;
+    await expect(
+      repo.save(s.id, {
+        ...body(first, "stale", "VISITED_SELECTED"),
+        launchId: "a",
+      }),
+    ).rejects.toMatchObject({ code: "STALE_REVISION" });
+    const input = {
+      ...body(second, "same", "VISITED_SELECTED"),
+      launchId: "b",
+    };
+    const duplicate = await Promise.all([
+      repo.save(s.id, input),
+      repo.save(s.id, input),
+    ]);
+    expect(duplicate[0]).toEqual(duplicate[1]);
+    const confirmed = duplicate[0];
+    expect(confirmed.outcome.revision).toBe(second.outcome.revision + 1);
+    const results = await Promise.allSettled([
+      repo.save(s.id, body(confirmed, "correction-a", "DID_NOT_EAT_OUT")),
+      repo.save(s.id, {
+        ...body(confirmed, "correction-b", "VISITED_OTHER"),
+        actualPlaceId: null,
+      }),
+    ]);
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    const final = await userRepository(db, user).session(s.id);
+    expect(final.questions).toEqual(s.questions);
+    expect(final.answers).toEqual(s.answers);
+    expect(final.decision).toEqual(s.decision);
+    expect(final.context).toEqual(s.context);
+    expect(final.outcome.actualPlaceId).toBeNull();
+    await expect(
+      repo.save(s.id, { ...input, status: "DID_NOT_EAT_OUT" }),
+    ).rejects.toMatchObject({ code: "REQUEST_ID_REUSED" });
+    expect(
+      (
+        await db
+          .collection("users")
+          .doc(user.uid)
+          .collection("restaurantRelations")
+          .get()
+      ).empty,
+    ).toBe(true);
+  }, 20000);
+  it("other-place lookup stores IDs only, accepts a returned alternative, permits unknown, and rejects arbitrary/expired IDs", async () => {
+    const { repo, s, db, user, clock, setTime } = await setup("outcome-other");
+    const { searchActualRestaurants } = await import(
+      "../lib/server/actual-restaurants"
+    );
+    const { syntheticPlaces } = await import("../lib/server/places");
+    const found = await searchActualRestaurants(
+      db,
+      user,
+      {
+        requestId: "lookup",
+        sessionId: s.id,
+        launchId: "later",
+        query: "示範",
+      },
+      () => syntheticPlaces("results"),
+      clock,
+    );
+    expect(found.cards.length).toBeGreaterThan(0);
+    const receipt = (
+      await db.doc("users/" + user.uid + "/actualLookups/lookup").get()
+    ).data();
+    expect(JSON.stringify(receipt)).not.toMatch(
+      /示範|address|name|rating|query/,
+    );
+    await expect(
+      repo.save(s.id, {
+        ...body(s, "invented", "VISITED_OTHER"),
+        actualPlaceId: "invented",
+        lookupRequestId: "lookup",
+      }),
+    ).rejects.toMatchObject({ code: "INVALID_ACTUAL_PLACE" });
+    const saved = await repo.save(s.id, {
+      ...body(s, "other", "VISITED_OTHER"),
+      actualPlaceId: found.cards[0].placeId,
+      lookupRequestId: "lookup",
+    });
+    expect(saved.outcome.actualPlaceId).toBe(found.cards[0].placeId);
+    setTime(eligible + 15 * 60000);
+    await expect(
+      repo.save(s.id, {
+        ...body(saved, "expired", "VISITED_OTHER"),
+        actualPlaceId: found.cards[0].placeId,
+        lookupRequestId: "lookup",
+      }),
+    ).rejects.toMatchObject({ code: "INVALID_ACTUAL_PLACE" });
+    const unknown = await repo.save(s.id, {
+      ...body(saved, "unknown", "VISITED_OTHER"),
+      actualPlaceId: null,
+    });
+    expect(unknown.outcome.actualPlaceId).toBeNull();
+    const missed = await repo.save(
+      s.id,
+      body(unknown, "missed", "DID_NOT_EAT_OUT"),
+    );
+    expect(missed.outcome.status).toBe("DID_NOT_EAT_OUT");
+    expect(missed.outcome.actualPlaceId).toBeNull();
+  });
+  it("outcome/open/search endpoints enforce Origin and authorization; another user cannot confirm a session", async () => {
+    const { identity, user, db, s } = await setup("outcome-route");
+    const { POST } = await import(
+      "../app/api/decision/sessions/[id]/outcome/route"
+    );
+    const { POST: open } = await import("../app/api/app/open/route");
+    const { POST: search } = await import(
+      "../app/api/restaurants/search/route"
+    );
+    const context = { params: Promise.resolve({ id: s.id }) };
+    expect(
+      (
+        await POST(
+          new Request("http://localhost:3000/api/test", { method: "POST" }),
+          context,
+        )
+      ).status,
+    ).toBe(401);
+    for (const route of [open, search])
+      expect(
+        (
+          await route(
+            new Request("http://localhost:3000/api/test", {
+              method: "POST",
+              headers: {
+                Authorization: "Bearer " + identity.token,
+                Origin: "https://wrong.test",
+              },
+              body: "{}",
+            }),
+          )
+        ).status,
+      ).toBe(403);
+    const other = await setup("outcome-foreign");
+    await db.doc("users/" + other.user.uid + "/sessions/saved").delete();
+    await expect(
+      other.repo.save(s.id, body(s, "foreign", "VISITED_SELECTED")),
+    ).rejects.toMatchObject({ status: 404 });
+    await db.doc("allowedUsers/" + user.uid).set({ enabled: false });
+    expect(
+      (
+        await POST(
+          new Request("http://localhost:3000/api/test", {
+            method: "POST",
+            headers: {
+              Authorization: "Bearer " + identity.token,
+              Origin: "http://localhost:3000",
+            },
+            body: JSON.stringify(body(s, "denied", "VISITED_SELECTED")),
+          }),
+          context,
+        )
+      ).status,
+    ).toBe(403);
+  });
+  it("lookup retries preserve accepted IDs, failures allow unknown-other, and real open returns profile plus independent warm-up", async () => {
+    const { repo, s, db, user, identity, clock } = await setup(
+      "outcome-lookup-retry",
+    );
+    const { searchActualRestaurants } = await import(
+      "../lib/server/actual-restaurants"
+    );
+    const { syntheticPlaces } = await import("../lib/server/places");
+    const provider = syntheticPlaces("closed");
+    const query = {
+      requestId: "lookup-stable",
+      sessionId: s.id,
+      launchId: "later",
+      query: "示範",
+    };
+    const first = await searchActualRestaurants(
+      db,
+      user,
+      query,
+      () => provider,
+      clock,
+    );
+    expect(first.cards.length).toBeGreaterThan(0);
+    provider.text = async () => [];
+    expect(
+      (
+        await searchActualRestaurants(db, user, query, () => provider, clock)
+      ).cards.map((c) => c.placeId),
+    ).toEqual(first.cards.map((c) => c.placeId));
+    await expect(
+      searchActualRestaurants(
+        db,
+        user,
+        { ...query, query: "改字" },
+        () => provider,
+        clock,
+      ),
+    ).rejects.toMatchObject({ code: "REQUEST_ID_REUSED" });
+    await expect(
+      searchActualRestaurants(
+        db,
+        user,
+        { ...query, requestId: "lookup-failure" },
+        () => syntheticPlaces("failure"),
+        clock,
+      ),
+    ).rejects.toMatchObject({ code: "PLACES_UNAVAILABLE" });
+    const unknown = await repo.save(s.id, {
+      ...body(s, "no-lookup", "VISITED_OTHER"),
+      actualPlaceId: null,
+    });
+    expect(unknown.outcome.status).toBe("VISITED_OTHER");
+    const { POST } = await import("../app/api/app/open/route");
+    const response = await POST(
+      new Request("http://localhost:3000/api/app/open", {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer " + identity.token,
+          Origin: "http://localhost:3000",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ requestId: "real-open", launchId: "real-open" }),
+      }),
+    );
+    expect(response.status).toBe(200);
+    const data = (await response.json()).data;
+    expect(data.profile.uid).toBe(user.uid);
+    expect(data.session).toBeNull();
+    expect(data.warmup.status).toBe("unavailable");
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+  });
+});

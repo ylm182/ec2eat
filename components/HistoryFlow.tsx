@@ -29,6 +29,17 @@ function HistoryList({ uid }: { uid: string }) {
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   const [resetRequired, setResetRequired] = useState(false);
+  useEffect(() => {
+    const updated = (event: Event) => {
+      const s = (event as CustomEvent<DecisionSession>).detail;
+      if (s.uid === uid)
+        setSessions((previous) =>
+          previous.map((old) => (old.id === s.id ? s : old)),
+        );
+    };
+    window.addEventListener("ec2eat:outcome", updated);
+    return () => window.removeEventListener("ec2eat:outcome", updated);
+  }, [uid]);
   const controller = useRef<AbortController | null>(null);
   const locked = useRef(false);
   async function load(reset = false) {

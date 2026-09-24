@@ -650,3 +650,42 @@ footer {
     animation: none;
   }
 }
+
+.outcome-prompt {
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 2px solid #879675;
+  border-radius: 1rem;
+  background: #faf7ee;
+}
+.outcome-form {
+  margin: 0.8rem 0;
+}
+.outcome-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+.outcome-form button {
+  margin: 0.3rem;
+}
+.outcome-form input:not([type="radio"]) {
+  display: block;
+  width: 100%;
+  padding: 0.7rem;
+  font: inherit;
+  margin: 0.6rem 0;
+  border: 1px solid #aaa;
+  border-radius: 0.5rem;
+}
+.actual-options label {
+  display: block;
+  padding: 0.6rem 0;
+}
+.history-outcome-editor {
+  margin: 1rem 0;
+}
+.history-outcome-editor summary {
+  cursor: pointer;
+  font-weight: 600;
+}
