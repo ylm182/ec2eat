@@ -1,4 +1,5 @@
 import "server-only";
+import { assertDataActive } from "./data-guard";
 import { Timestamp, type Firestore } from "firebase-admin/firestore";
 import {
   idSchema,
@@ -59,6 +60,7 @@ export function userRepository(db: Firestore, user: VerifiedUser) {
       };
     },
     async session(id: string): Promise<DecisionSession> {
+      await assertDataActive(db, uid, undefined, idSchema.parse(id));
       const snapshot = await root
         .collection("sessions")
         .doc(idSchema.parse(id))

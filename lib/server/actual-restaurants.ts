@@ -1,4 +1,5 @@
 import "server-only";
+import { assertDataActive } from "./data-guard";
 import { createHash } from "node:crypto";
 import { Timestamp, type Firestore } from "firebase-admin/firestore";
 import { actualSearchInput, canConfirm } from "../outcomes/contracts";
@@ -33,6 +34,7 @@ export async function searchActualRestaurants(
     .update(JSON.stringify({ kind: "actual-search", input }))
     .digest("hex");
   await db.runTransaction(async (tx) => {
+    await assertDataActive(db, user.uid, tx, input.sessionId);
     const [budget, operation] = await Promise.all([tx.get(limit), tx.get(op)]);
     if (operation.exists && operation.data()!.hash !== hash)
       throw new ApiError(409, "REQUEST_ID_REUSED", "要求編號已使用。");
@@ -50,6 +52,7 @@ export async function searchActualRestaurants(
       tx.create(op, {
         hash,
         kind: "actual-search",
+        sessionId: input.sessionId,
         expiresAt: Timestamp.fromMillis(clock() + 7 * 86400000),
       });
   });
@@ -127,6 +130,7 @@ export async function searchActualRestaurants(
     });
     // The first receipt wins. Retries refresh display content, never change accepted IDs.
     const winner = await db.runTransaction(async (tx) => {
+      await assertDataActive(db, user.uid, tx, input.sessionId);
       const existing = await tx.get(receiptRef);
       if (existing.exists) return validReceipt(existing.data()!);
       tx.create(receiptRef, {

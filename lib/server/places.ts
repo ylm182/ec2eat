@@ -1,4 +1,5 @@
 import "server-only";
+import { providerMetric } from "./telemetry";
 import { serverConfig } from "./config";
 import { ApiError } from "./http";
 import { GooglePlacesProvider } from "../providers/google-places";
@@ -28,10 +29,22 @@ export function placesProvider(): RestaurantProvider {
       "餐廳搜尋未接通，答案已儲存。",
       true,
     );
-  return new GooglePlacesProvider(
+  const provider = new GooglePlacesProvider(
     process.env.GOOGLE_PLACES_API_KEY,
     process.env.PLACES_MODEL_INPUT_APPROVED === "true",
   );
+  return {
+    source: provider.source,
+    modelInputAllowed: provider.modelInputAllowed,
+    nearby: (...args) =>
+      providerMetric("google-places", "nearby", () => provider.nearby(...args)),
+    text: (...args) =>
+      providerMetric("google-places", "text", () => provider.text(...args)),
+    details: (...args) =>
+      providerMetric("google-places", "details", () =>
+        provider.details(...args),
+      ),
+  };
 }
 export function syntheticPlaces(mode: string): RestaurantProvider {
   const search: RestaurantProvider["nearby"] = async (centre) => {

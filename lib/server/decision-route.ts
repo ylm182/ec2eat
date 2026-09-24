@@ -34,5 +34,6 @@ export function decisionRoute(
       );
     },
     () => requestId,
+    `decision.${kind}`,
   );
 }

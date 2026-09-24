@@ -24,3 +24,4 @@ jobs:
           HF_TOKEN: EC2EAT_SECRET_CANARY_7f21
           OAUTH_CLIENT_SECRET: EC2EAT_SECRET_CANARY_7f21
       - run: npm run check:client
+      - run: npm run check:release

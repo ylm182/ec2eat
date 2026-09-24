@@ -26,5 +26,6 @@ export function POST(request: Request) {
       return { ...opening, profile, warmup };
     },
     () => requestId,
+    "app.open",
   );
 }

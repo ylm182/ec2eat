@@ -19,6 +19,7 @@ export const warmLaya = onSchedule(
     secrets: [hfToken],
   },
   async (event) => {
+    const started = performance.now();
     const config = layaConfiguration({
       ...process.env,
       APP_MODE: "live",
@@ -33,6 +34,12 @@ export const warmLaya = onSchedule(
       `scheduled:${event.scheduleTime}:${crypto.randomUUID()}`,
     );
     // No request bodies, credentials, user IDs, event text or candidate data in logs.
-    console.info(JSON.stringify({ event: "laya_scheduled_warmup", ...result }));
+    console.info(
+      JSON.stringify({
+        event: "laya_scheduled_warmup",
+        durationMs: Math.round(performance.now() - started),
+        ...result,
+      }),
+    );
   },
 );

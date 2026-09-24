@@ -16,5 +16,6 @@ export function POST(request: Request) {
       return searchActualRestaurants(adminServices().db, user, input);
     },
     () => requestId,
+    "restaurant.actual-search",
   );
 }

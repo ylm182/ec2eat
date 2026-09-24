@@ -1,4 +1,7 @@
 import "server-only";
+import { prepareLearning } from "./learning";
+import { LEARNING_VERSION } from "../domain/learning";
+import { assertDataActive } from "./data-guard";
 import { createHash } from "node:crypto";
 import {
   FieldValue,
@@ -76,6 +79,7 @@ export function decisionRepository(
     const id = sessionId
       ? idSchema.parse(sessionId)
       : digest({ uid, requestId }).slice(0, 32);
+    await assertDataActive(db, uid, undefined, id);
     const ref = root.collection("sessions").doc(id);
     const op = root.collection("operations").doc(requestId);
     const limit = root.collection("limits").doc("decisions");
@@ -183,6 +187,7 @@ export function decisionRepository(
       scored = await rank(scoreInput);
     }
     await db.runTransaction(async (tx) => {
+      await assertDataActive(db, uid, tx, id);
       const previous = await tx.get(op);
       if (previous.exists) {
         if (previous.data()!.hash !== hash)
@@ -198,6 +203,11 @@ export function decisionRepository(
         tx.get(limit),
         tx.get(root),
       ]);
+      const bootstrap =
+        kind === "create" &&
+        profile.data()?.learningAlgorithm !== LEARNING_VERSION
+          ? await prepareLearning(tx, root, null, null)
+          : null;
       const now = Timestamp.now();
       const time = now.toDate().toISOString();
       const hour = Math.floor(now.toMillis() / 3600000);
@@ -223,7 +233,7 @@ export function decisionRepository(
             "SESSION_ALREADY_EXISTS",
             "呢個要求已建立過選擇，請載入原有記錄。",
           );
-        next = makeStart(profile.data() ?? {});
+        next = makeStart(bootstrap?.profile ?? profile.data() ?? {});
       } else {
         if (!saved.exists)
           throw new ApiError(404, "NOT_FOUND", "搵唔到呢次選擇。");
@@ -259,6 +269,7 @@ export function decisionRepository(
       // Commit timestamps and the replay snapshot resolve in the same Firestore commit.
       document.updatedAt = FieldValue.serverTimestamp();
       if (kind === "create") document.createdAt = FieldValue.serverTimestamp();
+      bootstrap?.();
       tx.set(ref, document);
       tx.create(op, {
         hash,
@@ -272,13 +283,17 @@ export function decisionRepository(
         mutations: counts.mutations + 1,
       });
       if (!profile.exists)
-        tx.create(root, {
-          timezone: "Asia/Hong_Kong",
-          priorVersion: "initial",
-          calendarConnected: false,
-          createdAt: FieldValue.serverTimestamp(),
-          updatedAt: FieldValue.serverTimestamp(),
-        });
+        tx.set(
+          root,
+          {
+            timezone: "Asia/Hong_Kong",
+            ...(bootstrap ? {} : { priorVersion: "initial" }),
+            calendarConnected: false,
+            createdAt: FieldValue.serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true },
+        );
     });
     // Read resolved server timestamps from the immutable response, not a newer session revision.
     return sessionSchema.parse(

@@ -1,4 +1,5 @@
 import "server-only";
+import { recordApiMetric } from "./telemetry";
 import { ZodError, type ZodType } from "zod";
 import { serverConfig } from "./config";
 export class ApiError extends Error {
@@ -33,13 +34,25 @@ export async function parseBody<T>(
 export async function apiResponse(
   run: () => Promise<unknown>,
   requestId: string | (() => string) = crypto.randomUUID(),
+  route = "api",
 ) {
+  const started = performance.now();
+  const metric = (status: number, code: string | null, data?: unknown) =>
+    recordApiMetric(
+      route,
+      typeof requestId === "function" ? requestId() : requestId,
+      performance.now() - started,
+      status,
+      code,
+      data,
+    );
   const headers = {
     "Cache-Control": "private, no-store",
     Vary: "Authorization, Origin",
   };
   try {
     const data = await run();
+    metric(200, null, data);
     const revision =
       data && typeof data === "object" && "revision" in data
         ? data.revision
@@ -64,6 +77,7 @@ export async function apiResponse(
               "暫時未能連線，請稍後再試。",
               true,
             );
+    metric(safe.status, safe.code);
     return Response.json(
       {
         error: {

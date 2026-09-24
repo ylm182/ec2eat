@@ -94,12 +94,19 @@ export function contextDependencies(db: Firestore): ContextDependencies {
     },
     calendar: async (uid, now, signal) => {
       const auth = configuredCalendar(db);
-      const access = await auth.access(uid, signal);
+      let access: Awaited<ReturnType<typeof auth.access>> | undefined;
       let events;
       try {
-        events = await calendarEvents(access.token, now, signal);
+        events = await bounded(
+          2000,
+          async (limited) => {
+            access = await auth.access(uid, limited);
+            return calendarEvents(access.token, now, limited);
+          },
+          signal,
+        );
       } catch (e) {
-        if (e instanceof ProviderFailure && e.code === "denied")
+        if (e instanceof ProviderFailure && e.code === "denied" && access)
           await auth.clear(uid, access.generation);
         throw e;
       }
@@ -109,7 +116,7 @@ export function contextDependencies(db: Firestore): ContextDependencies {
           config.GOOGLE_CLOUD_PROJECT,
           config.VERTEX_LOCATION,
         ).extractEvents(events, now, signal);
-      if (!(await auth.isCurrent(uid, access.generation)))
+      if (!(await auth.isCurrent(uid, access!.generation)))
         throw new ProviderFailure("denied");
       return hints;
     },

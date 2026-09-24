@@ -1,4 +1,6 @@
 import "server-only";
+import { prepareLearning } from "./learning";
+import { assertDataActive } from "./data-guard";
 import { createHash, randomUUID } from "node:crypto";
 import { Timestamp, type Firestore } from "firebase-admin/firestore";
 import { z } from "zod";
@@ -48,6 +50,7 @@ export function restaurantRepository(
     return s;
   }
   async function get(id: string) {
+    await assertDataActive(db, user.uid, undefined, id);
     const snap = await ref(id).get();
     if (!snap.exists) throw new ApiError(404, "NOT_FOUND", "搵唔到呢次選擇。");
     return parse(snap.data(), id);
@@ -55,6 +58,7 @@ export function restaurantRepository(
   async function budget() {
     const limit = root.collection("limits").doc("places");
     await db.runTransaction(async (tx) => {
+      await assertDataActive(db, user.uid, tx);
       const data = (await tx.get(limit)).data();
       const hour = Math.floor(Date.now() / 3600000);
       const count = data?.hour === hour ? data.count : 0;
@@ -80,6 +84,7 @@ export function restaurantRepository(
   }
   return {
     async recommend(id: string, raw: unknown) {
+      await assertDataActive(db, user.uid, undefined, id);
       const input = recommendInput.parse(raw);
       const op = root.collection("restaurantOperations").doc(input.requestId);
       const digest = hash({ id, input });
@@ -118,6 +123,7 @@ export function restaurantRepository(
       const stopped = await decisionRepository(db, user).recommend(id, input);
       const owner = randomUUID();
       const claimed = await db.runTransaction(async (tx) => {
+        await assertDataActive(db, user.uid, tx, id);
         const [operation, saved] = await Promise.all([
           tx.get(op),
           tx.get(ref(id)),
@@ -136,6 +142,7 @@ export function restaurantRepository(
           throw new ApiError(409, "STALE_REVISION", "選擇已更新，請重新載入。");
         tx.set(op, {
           hash: digest,
+          sessionId: id,
           owner,
           leaseUntil: Timestamp.fromMillis(Date.now() + 30000),
           expiresAt: Timestamp.fromMillis(Date.now() + 7 * 86400000),
@@ -154,7 +161,7 @@ export function restaurantRepository(
             ? 5000
             : 10000
           : (stopped.search?.radiusM ?? base);
-        const found = await bounded(12000, (signal) =>
+        const found = await bounded(10000, (signal) =>
           searchRestaurants(
             stopped,
             centre.location,
@@ -165,6 +172,7 @@ export function restaurantRepository(
           ),
         );
         return await db.runTransaction(async (tx) => {
+          await assertDataActive(db, user.uid, tx, id);
           const [operation, saved] = await Promise.all([
             tx.get(op),
             tx.get(ref(id)),
@@ -215,6 +223,7 @@ export function restaurantRepository(
         });
       } catch (error) {
         await db.runTransaction(async (tx) => {
+          await assertDataActive(db, user.uid, tx);
           const snap = await tx.get(op);
           if (snap.data()?.owner === owner && !snap.data()?.response)
             tx.update(op, { leaseUntil: Timestamp.fromMillis(0) });
@@ -276,6 +285,7 @@ export function restaurantRepository(
       return { cards };
     },
     async select(id: string, raw: unknown) {
+      await assertDataActive(db, user.uid, undefined, id);
       const input = selectInput.parse(raw);
       const op = root.collection("operations").doc(input.requestId);
       const digest = hash({ kind: "select", id, input });
@@ -333,6 +343,7 @@ export function restaurantRepository(
           "餐廳目前不可選擇，請揀另一間。",
         );
       return db.runTransaction(async (tx) => {
+        await assertDataActive(db, user.uid, tx, id);
         const [operation, saved] = await Promise.all([
           tx.get(op),
           tx.get(ref(id)),
@@ -359,6 +370,8 @@ export function restaurantRepository(
           },
         });
         validateTransition(s, next);
+        const commitLearning = await prepareLearning(tx, root, s, next);
+        commitLearning();
         const doc = encodeDocument(next);
         tx.set(ref(id), doc as FirebaseFirestore.DocumentData);
         tx.create(op, {

@@ -1,4 +1,5 @@
 import "server-only";
+import { assertDataActive } from "./data-guard";
 import { createHash, randomBytes } from "node:crypto";
 import {
   FieldValue,
@@ -128,6 +129,7 @@ export class CalendarAuthorization {
     const connection = this.db.doc(`oauthConnections/${uid}`),
       stateRef = this.db.doc(`oauthStates/${sha(state)}`);
     await this.db.runTransaction(async (tx) => {
+      await assertDataActive(this.db, uid, tx);
       const current = await tx.get(connection);
       const data = current.data();
       if (data?.lastBeginAt?.toMillis() > Date.now() - 10000)
@@ -250,6 +252,7 @@ export class CalendarAuthorization {
     );
     signal.throwIfAborted();
     await this.db.runTransaction(async (tx) => {
+      await assertDataActive(this.db, identity.uid, tx);
       const ref = this.db.doc(`oauthConnections/${identity.uid}`);
       const [connection, allowed] = await Promise.all([
         tx.get(ref),
@@ -307,7 +310,12 @@ export class CalendarAuthorization {
   async clear(uid: string, generation?: string) {
     await this.db.runTransaction(async (tx) => {
       const ref = this.db.doc(`oauthConnections/${uid}`);
+      const deletion = await tx.get(this.db.doc(`dataDeletions/${uid}`));
       const existing = await tx.get(ref);
+      if (deletion.exists) {
+        tx.delete(ref);
+        return;
+      }
       if (generation && existing.data()?.generation !== generation) return;
       tx.set(ref, {
         generation: randomBytes(16).toString("hex"),

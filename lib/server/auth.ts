@@ -1,4 +1,5 @@
 import "server-only";
+import { assertDataActive } from "./data-guard";
 import { adminServices } from "./firebase";
 import { ApiError } from "./http";
 import { idSchema } from "../domain/schema";
@@ -23,6 +24,7 @@ const firebaseDependencies: AuthDependencies = {
 export async function authenticate(
   request: Request,
   dependencies: AuthDependencies = firebaseDependencies,
+  allowDeleted = false,
 ): Promise<VerifiedUser> {
   const match = /^Bearer ([^\s]+)$/.exec(
     request.headers.get("authorization") ?? "",
@@ -40,5 +42,7 @@ export async function authenticate(
     !(await dependencies.allowed(identity.uid))
   )
     throw new ApiError(403, "NOT_ALLOWED", "此帳戶未獲邀請。");
+  if (dependencies === firebaseDependencies && !allowDeleted)
+    await assertDataActive(adminServices().db, identity.uid);
   return Object.freeze({ uid: identity.uid, [verified]: true as const });
 }

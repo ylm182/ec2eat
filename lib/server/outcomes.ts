@@ -1,4 +1,6 @@
 import "server-only";
+import { prepareLearning } from "./learning";
+import { assertDataActive } from "./data-guard";
 import { createHash } from "node:crypto";
 import { Timestamp, type Firestore } from "firebase-admin/firestore";
 import {
@@ -48,6 +50,7 @@ export function outcomeRepository(
       const op = root.collection("operations").doc(input.requestId);
       const hash = digest({ kind: "open", input });
       return db.runTransaction(async (tx) => {
+        await assertDataActive(db, user.uid, tx);
         const [operation, opening] = await Promise.all([
           tx.get(op),
           tx.get(launch),
@@ -163,6 +166,7 @@ export function outcomeRepository(
       const op = root.collection("operations").doc(input.requestId);
       const hash = digest({ kind: "outcome", id, input });
       return db.runTransaction(async (tx) => {
+        await assertDataActive(db, user.uid, tx, id);
         const operation = await tx.get(op);
         sameHash(operation.data(), hash);
         if (operation.exists) return parse(operation.data()!.response, id);
@@ -249,6 +253,10 @@ export function outcomeRepository(
           outcome,
         });
         validateTransition(s, next);
+        const commitLearning = input.snooze
+          ? null
+          : await prepareLearning(tx, root, s, next);
+        commitLearning?.();
         tx.set(
           sessions.doc(id),
           encodeDocument(next) as FirebaseFirestore.DocumentData,
@@ -266,8 +274,6 @@ export function outcomeRepository(
           { completed: true },
           { merge: true },
         );
-        // The canonical, revisioned outcome is the input to M9's bounded recomputation.
-        // No append-only learning increments are applied by confirmation or corrections.
         return response;
       });
     },

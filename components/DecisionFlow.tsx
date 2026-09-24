@@ -1,4 +1,5 @@
 "use client";
+import { DeleteSession } from "./DataControls";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { currentLaunchId } from "@/lib/client/launch";
@@ -269,6 +270,7 @@ function AuthenticatedDecision({ uid }: { uid: string }) {
         </div>
       ) : null}
       {!session && <CalendarConnection uid={uid} />}
+      {session && <DeleteSession uid={uid} session={session} />}
       {session && (
         <div className="hint">
           <p>

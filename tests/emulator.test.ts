@@ -1327,15 +1327,18 @@ describe("M8 delayed outcomes and corrections", () => {
     await expect(
       repo.save(s.id, { ...input, status: "DID_NOT_EAT_OUT" }),
     ).rejects.toMatchObject({ code: "REQUEST_ID_REUSED" });
-    expect(
-      (
-        await db
-          .collection("users")
-          .doc(user.uid)
-          .collection("restaurantRelations")
-          .get()
-      ).empty,
-    ).toBe(true);
+    const relation = (
+      await db
+        .doc(
+          `users/${user.uid}/restaurantRelations/${s.decision.selectedPlaceId}`,
+        )
+        .get()
+    ).data();
+    expect(relation).toMatchObject({
+      selectedCount: 1,
+      actualVisitCount: 0,
+      lastVisitAt: null,
+    });
   }, 20000);
   it("other-place lookup stores IDs only, accepts a returned alternative, permits unknown, and rejects arbitrary/expired IDs", async () => {
     const { repo, s, db, user, clock, setTime } = await setup("outcome-other");
@@ -1520,5 +1523,293 @@ describe("M8 delayed outcomes and corrections", () => {
     expect(data.session).toBeNull();
     expect(data.warmup.status).toBe("unavailable");
     expect(response.headers.get("cache-control")).toBe("private, no-store");
+  });
+});
+
+describe("M9 recomputed learning and deletion", () => {
+  async function setup(name: string) {
+    const identity = await googleToken(name);
+    const { db } = adminServices();
+    await db.doc(`allowedUsers/${identity.uid}`).set({ enabled: true });
+    const user = await authenticate(request(identity.token));
+    const { outcomeRepository } = await import("../lib/server/outcomes");
+    const { deletionRepository } = await import("../lib/server/deletion");
+    return {
+      identity,
+      user,
+      db,
+      root: db.doc(`users/${user.uid}`),
+      outcomes: outcomeRepository(db, user, () =>
+        Date.parse("2026-10-01T08:00:00Z"),
+      ),
+      deletion: deletionRepository(db, user),
+    };
+  }
+  async function fixture(uid: string, id: string, confirmed = false) {
+    const { selectedFixture } = await import("./fixtures");
+    const s = selectedFixture();
+    s.uid = uid;
+    s.id = id;
+    s.answers = [
+      {
+        questionInstanceId: "question-1",
+        action: "left",
+        optionId: "left",
+        value: 0.8,
+        answeredAt: s.createdAt,
+        requestId: "answer",
+      },
+    ];
+    if (confirmed)
+      s.outcome = {
+        ...s.outcome,
+        status: "VISITED_SELECTED",
+        actualPlaceId: s.decision.selectedPlaceId,
+        confirmedAt: "2026-09-24T08:00:00.000Z",
+      };
+    return s;
+  }
+  function body(
+    s: ReturnType<typeof sessionFixture>,
+    requestId: string,
+    status = "VISITED_SELECTED",
+  ) {
+    return {
+      requestId,
+      launchId: "later",
+      expectedRevision: s.revision,
+      expectedOutcomeRevision: s.outcome.revision,
+      status,
+    };
+  }
+  it("recomputes a 20-session window, refills on correction/deletion and does not double count replay", async () => {
+    const { db, user, root, outcomes, deletion } =
+      await setup("learning-window");
+    for (let i = 0; i < 21; i++) {
+      const s = await fixture(
+        user.uid,
+        `s${String(i).padStart(2, "0")}`,
+        i < 20,
+      );
+      await root
+        .collection("sessions")
+        .doc(s.id)
+        .set(encodeDocument(s) as Record<string, unknown>);
+    }
+    const pending = await userRepository(db, user).session("s20");
+    const confirmed = await outcomes.save(pending.id, body(pending, "confirm"));
+    const profile = (await root.get()).data()!;
+    expect(profile.learningSourceSessionIds).toHaveLength(20);
+    expect(profile.learningSourceSessionIds).not.toContain("s00");
+    expect(profile.priors.speed.strength).toBe(0.25);
+    const fresh = await decisionRepository(db, user).create({
+      requestId: "new-prior",
+      launchId: "new",
+      area: "中環",
+    });
+    expect(fresh.priorVersion).toBe(profile.priorVersion);
+    expect(fresh.preferences.speed).toEqual(profile.priors.speed);
+    expect(await outcomes.save(pending.id, body(pending, "confirm"))).toEqual(
+      confirmed,
+    );
+    expect((await root.get()).data()?.learningRevision).toBe(
+      profile.learningRevision,
+    );
+    expect(
+      (
+        await root
+          .collection("restaurantRelations")
+          .doc("synthetic-place")
+          .get()
+      ).data(),
+    ).toMatchObject({ selectedCount: 21, actualVisitCount: 21 });
+    const corrected = await outcomes.save(
+      confirmed.id,
+      body(confirmed, "correct", "DID_NOT_EAT_OUT"),
+    );
+    expect((await root.get()).data()?.learningSourceSessionIds).toContain(
+      "s00",
+    );
+    expect(corrected.priorVersion).toBe(pending.priorVersion);
+    expect(corrected.preferences).toEqual(pending.preferences);
+    await deletion.session("s19", { confirm: true, expectedRevision: 0 });
+    const next = (await root.get()).data()!;
+    expect(next.learningSourceSessionIds).toHaveLength(19);
+    expect(next.priors.speed.strength).toBe(0.2375);
+    expect(
+      (
+        await root
+          .collection("restaurantRelations")
+          .doc("synthetic-place")
+          .get()
+      ).data(),
+    ).toMatchObject({ selectedCount: 20, actualVisitCount: 19 });
+    await deletion.session("s19", { confirm: true, expectedRevision: 0 });
+    expect((await root.get()).data()?.learningRevision).toBe(
+      next.learningRevision,
+    );
+  }, 20000);
+  it("serializes confirmations on different sessions and removes evidence when both are deleted", async () => {
+    const { root, user, outcomes, deletion } = await setup("learning-race");
+    const a = await fixture(user.uid, "a"),
+      b = await fixture(user.uid, "b");
+    for (const s of [a, b])
+      await root
+        .collection("sessions")
+        .doc(s.id)
+        .set(encodeDocument(s) as Record<string, unknown>);
+    const results = await Promise.all([
+      outcomes.save(a.id, body(a, "a")),
+      outcomes.save(b.id, body(b, "b")),
+    ]);
+    expect((await root.get()).data()?.learningSourceSessionIds).toHaveLength(2);
+    expect(
+      (
+        await root
+          .collection("restaurantRelations")
+          .doc("synthetic-place")
+          .get()
+      ).data(),
+    ).toMatchObject({ selectedCount: 2, actualVisitCount: 2 });
+    for (const s of results)
+      await deletion.session(s.id, {
+        confirm: true,
+        expectedRevision: s.revision,
+      });
+    expect((await root.get()).data()?.priors.speed.state).toBe("unknown");
+    expect((await root.collection("restaurantRelations").get()).empty).toBe(
+      true,
+    );
+    await expect(outcomes.save(a.id, body(a, "a"))).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    });
+    expect((await root.collection("operations").get()).empty).toBe(true);
+  }, 20000);
+  it("deleted create requests cannot recreate sessions; in-flight scoring cannot restore account data", async () => {
+    const { root, db, user, deletion, identity } =
+      await setup("delete-inflight");
+    const repo = decisionRepository(db, user);
+    const input = { requestId: "create", launchId: "start", area: "中環" };
+    const s = await repo.create(input);
+    await expect(
+      deletion.session(s.id, { confirm: true, expectedRevision: 99 }),
+    ).rejects.toMatchObject({ code: "STALE_REVISION" });
+    await deletion.session(s.id, {
+      confirm: true,
+      expectedRevision: s.revision,
+    });
+    await expect(repo.create(input)).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    });
+    let release!: () => void, entered!: () => void;
+    const pause = new Promise<void>((resolve) => (release = resolve)),
+      ready = new Promise<void>((resolve) => (entered = resolve));
+    const { HeuristicDecisionProvider } = await import(
+      "../lib/providers/heuristic"
+    );
+    const slow = decisionRepository(db, user, undefined, async (input) => {
+      entered();
+      await pause;
+      return new HeuristicDecisionProvider().rank(
+        input,
+        new AbortController().signal,
+      );
+    });
+    const pending = slow.create({ ...input, requestId: "inflight" });
+    await ready;
+    await db.doc(`oauthConnections/${user.uid}`).set({
+      generation: "test",
+      encryptedRefreshToken: "synthetic-not-a-token",
+    });
+    await db.doc("oauthStates/delete-test").set({ uid: user.uid });
+    const removed = await deletion.account({ confirm: "DELETE" });
+    expect(removed).toEqual({ deleted: true, revoked: false });
+    release();
+    await expect(pending).rejects.toMatchObject({ code: "DATA_DELETED" });
+    expect((await root.get()).exists).toBe(false);
+    expect(await root.listCollections()).toHaveLength(0);
+    expect((await db.doc(`oauthConnections/${user.uid}`).get()).exists).toBe(
+      false,
+    );
+    expect((await db.doc("oauthStates/delete-test").get()).exists).toBe(false);
+    expect(await deletion.account({ confirm: "DELETE" })).toEqual(removed);
+    await expect(authenticate(request(identity.token))).rejects.toMatchObject({
+      code: "DATA_DELETED",
+    });
+    await expect(
+      authenticate(request(identity.token), undefined, true),
+    ).resolves.toMatchObject({ uid: user.uid });
+  }, 20000);
+  it("initializes priors from pre-M9 confirmations without rewriting their snapshots", async () => {
+    const { db, root, user } = await setup("learning-bootstrap");
+    const old = await fixture(user.uid, "legacy", true);
+    await root
+      .collection("sessions")
+      .doc(old.id)
+      .set(encodeDocument(old) as Record<string, unknown>);
+    const next = await decisionRepository(db, user).create({
+      requestId: "first-m9",
+      launchId: "new",
+      area: "中環",
+    });
+    expect(next.preferences.speed).toEqual({
+      state: "inferred",
+      value: 0.8,
+      strength: 0.0125,
+    });
+    expect(next.priorVersion).toBe((await root.get()).data()?.priorVersion);
+    expect(await userRepository(db, user).session(old.id)).toEqual(old);
+  });
+  it("deletion routes enforce origin, ownership and confirmation", async () => {
+    const owner = await setup("delete-routes-owner"),
+      stranger = await setup("delete-routes-stranger");
+    const s = await fixture(owner.user.uid, "private");
+    await owner.root
+      .collection("sessions")
+      .doc(s.id)
+      .set(encodeDocument(s) as Record<string, unknown>);
+    const { POST } = await import(
+      "../app/api/sessions/[sessionId]/delete/route"
+    );
+    const call = (token: string, origin: string, body: unknown) =>
+      POST(
+        new Request("http://localhost:3000/api/sessions/private/delete", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Origin: origin,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(body),
+        }),
+        { params: Promise.resolve({ sessionId: s.id }) },
+      );
+    expect(
+      (
+        await call(owner.identity.token, "https://other.test", {
+          confirm: true,
+          expectedRevision: 0,
+        })
+      ).status,
+    ).toBe(403);
+    expect(
+      (
+        await call(stranger.identity.token, "http://localhost:3000", {
+          confirm: true,
+          expectedRevision: 0,
+        })
+      ).status,
+    ).toBe(404);
+    expect(
+      (
+        await call(owner.identity.token, "http://localhost:3000", {
+          confirm: false,
+          expectedRevision: 0,
+        })
+      ).status,
+    ).toBe(422);
+    expect(
+      (await owner.root.collection("sessions").doc(s.id).get()).exists,
+    ).toBe(true);
   });
 });

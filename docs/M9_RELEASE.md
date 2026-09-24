@@ -1,0 +1,40 @@
+# M9 release readiness
+
+Local M9 code is implemented. Production release remains blocked; no cloud resources, credentials, billing budgets, log sinks or alerts have been created. Use the implementation specification and architecture as the product contract.
+
+## Local gates
+
+Run `npm test`, `npm run test:emulator` (Java 21, isolated test ports), `npm --prefix functions run build`, `npm run build`, `npm run typecheck`, `npm run check:client`, and `npm run check:release`. CI includes these checks. Do not run test cleanup against the preview emulators.
+
+`check:release` validates checked-in region/model/scaling declarations. `check:release -- --live` also checks configuration presence and a locally supplied evidence file; it never prints secret values or contacts providers. It deliberately fails with the current unconfigured environment and missing verified Laya recipe. No credentials should be committed.
+
+An operator can set `EC2EAT_RELEASE_EVIDENCE` to a private JSON file keyed by the gates below. Each gate requires `{ "status": "passed", "verifiedAt": "<actual UTC verification time>", "reference": "<actual private report or console evidence reference>" }`. Evidence must be reviewed within seven days. This is an offline record of human verification, not proof that a deployed resource exists. Do not fill it with assumed successes.
+
+## External gates and evidence required
+
+- `regions`: actual App Hosting backend in Taiwan (`asia-east1`), actual Firestore database in Hong Kong (`asia-east2`), deployed rules/indexes/TTL policies. YAML comments cannot select a provisioned region. Verify Next.js adapter support and the deployed health response.
+- `firebase-auth`: actual HTTPS origin, browser config, approved Google account/allowlist, rejected unapproved user and cross-user access, least-privilege service account. Use Secret Manager references for server secrets.
+- `calendar-kms`: OAuth consent/redirect, read-only scope, KMS key and IAM, real connect/read/disconnect/revocation, failed callback and account-deletion race. Keep Calendar optional.
+- `gemini-smoke`: a real `gemini-3.5-flash-lite` call in the configured Vertex location, schema validation and timeout fallback. Never substitute another model silently.
+- `laya-contract`: authorized HF endpoint, pinned checkpoint/runtime and installed sanitized verified serving recipe. Validate real payload/output, inference deadline, shared circuit and app/scheduled warm-up. Configure zero-to-one replicas and 60-minute idle scale-down, then inspect actual endpoint settings and billing.
+- `places-permissions`: real search/details/select/Maps/attribution, required indexes and content-use approval. Model-input approval is separate and defaults off. Do not retain raw Google restaurant content.
+- `weather-retention`: service entitlement, attribution, permitted fields and **actual provider-content expiry cleanup**, including session/replay copies. Read-time redaction is not physical cleanup. Keep Weather persistence disabled until this is verified; implement approved cleanup before enabling it.
+- `quotas-budgets`: verify App Hosting 0–2 instances, scheduled worker maximum one, HF maximum one, provider request quotas and the existing per-user limits. The owner must supply currency, monthly spend amounts, alert thresholds and recipients for Google Cloud and HF. No amounts or recipients have been invented. Billing alerts do not impose a hard spending cap.
+- `logs-alerts`: configure the relevant Cloud Logging buckets for 30-day technical-log retention, access controls, and platform access-log handling. Create dashboard distributions for API p50/p95 by route, scoring fallback ratio, Places success/failure and operation counts, confirmed outcomes, and HF warm-up result/duration. Use billing/Vertex/HF usage reports for actual spend/token totals; app operation counts are not billable-request counts. Alert on repeated authorization/configuration failures, scheduled warm-up failures and sustained provider outages. Expected optional-provider fallback alone should not page the owner.
+- `hk-device`: owner executes the frontend checklist and a real Hong Kong mobile flow: Google sign-in → optional context → binary swipes/neutral → real shortlist → explicit selection/Maps → flipped history → four-hour later opening confirmation → correction → new session using bounded priors. Record network, device, timestamp, measured p50/p95 and errors. Target restaurant retrieval ≤8s; the search/ranking work has a 10s timeout, but auth, Firestore commit and network time still require end-to-end verification. Calendar token/event acquisition is capped at 2s; optional Gemini remains capped at 4s inside the existing 6.5s combined context envelope.
+- `rollback`: retain the previous tested App Hosting rollout, verify rollback on the actual backend, and practice disabling optional providers so deterministic ranking remains usable. A rollback must keep deletion fences effective; do not roll back to pre-M9 writers after data deletion is enabled. No destructive schema migration is required. Database backups must not silently restore deleted user data.
+- `dependency-review`: production audit on 24 September 2026 found **0 high/critical and 2 moderate findings**, the transitive `uuid` / `gaxios` chain. Track compatible upstream remediation or an explicit reviewed disposition before release. No forced major dependency override was applied.
+
+## Telemetry limits
+
+API logs use fixed projections: route, hashed request/session/user references, duration, status/error category, provider, hashed model revision, fallback flag, question/candidate counts, stop reason and outcome. No answers, raw provider text, precise location, URLs, refresh tokens or error stacks are logged by this instrumentation. Per-operation Places logs include a coarse field-mask category; Laya logs include rank/warm duration and warm-up status. Scheduled warm-up includes duration. Hashes are pseudonymous, not a claim of irreversible anonymization.
+
+API replay requests are logged as requests too: deduplicate by request reference for outcome analytics, and use canonical session outcomes/relations for accurate visit totals. Technical logs can retain earlier outcome states until the configured 30-day expiry; they are not a learning input. Provider token/spend figures must come from actual provider accounting, not fabricated estimates.
+
+## Deletion operations
+
+Session deletion is revision-checked and atomic with recomputation. It leaves a content-free session tombstone and opening control markers to stop old retries and preserve one prompt per opening. Replay payloads, restaurant leases and actual-lookup receipts are cleaned in batches of 200; an interrupted cleanup can be retried. Deploy the explicit `response.id` index overrides as well as composite session indexes before enabling deletion.
+
+Account-data deletion first writes a server-only `dataDeletions/{uid}` fence. In-flight session, outcome, lookup and OAuth writes read that fence transactionally. It then revokes Calendar when configured, recursively removes the user subtree, and removes OAuth connection/state records. Repeat the same deletion action after an interrupted response; the retry route accepts a verified allowlisted Google identity even while normal app access is fenced. A failed/unavailable Google revocation is reported honestly; the owner can remove the app in Google account permissions.
+
+The external Firebase Auth identity, administrator allowlist and minimal deletion fence remain; this action deletes ec2eat application data, not the user's Google identity. Restoring app access requires an administrator to verify cleanup, revoke old Firebase sessions, require a fresh login and deliberately reset the deletion fence. Do not delete that fence casually. Local session pointers and in-memory UI caches are discarded on successful deletion. Use a disposable account for destructive manual acceptance; no preview data was deleted by implementation tests.

@@ -21,5 +21,6 @@ export async function POST(
       );
     },
     () => requestId,
+    "restaurant.select",
   );
 }

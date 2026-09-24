@@ -22,5 +22,6 @@ export function POST(
       );
     },
     () => requestId,
+    "outcome.save",
   );
 }

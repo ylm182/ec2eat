@@ -1,4 +1,5 @@
 "use client";
+import { DeleteSession } from "./DataControls";
 import { OutcomeForm } from "./OutcomeForm";
 import { useEffect, useId, useRef, useState } from "react";
 import { z } from "zod";
@@ -342,6 +343,7 @@ export function HistoryCard({
           </>
         )}
       </div>
+      <DeleteSession uid={uid} session={s} />
     </article>
   );
 }

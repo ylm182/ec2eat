@@ -7,6 +7,7 @@ import {
   signOut,
 } from "firebase/auth";
 import { clientAuth } from "@/lib/client/firebase";
+import { AccountDataControls } from "./DataControls";
 import { AppWarmup } from "./AppWarmup";
 import { copy } from "@/lib/copy";
 export function Account({
@@ -18,9 +19,19 @@ export function Account({
     "loading" | "setup" | "signed-out" | "allowed" | "denied"
   >("loading");
   const [verifiedUid, setVerifiedUid] = useState<string | null>(null);
+  const [deletionUid, setDeletionUid] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   useEffect(() => {
+    const deleted = localStorage.getItem("ec2eat:data-deleted");
+    if (deleted) {
+      setMessage(
+        deleted === "revoke-needed"
+          ? "資料已刪除。Google 撤銷未確認；請到 Google 帳戶「第三方連接」移除 ec2eat 權限。"
+          : "個人資料已刪除。",
+      );
+      localStorage.removeItem("ec2eat:data-deleted");
+    }
     let active = true;
     let sequence = 0;
     const auth = clientAuth();
@@ -31,6 +42,7 @@ export function Account({
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       const current = ++sequence;
       setVerifiedUid(null);
+      setDeletionUid(null);
       if (!user) {
         onAuthorizationChange?.(null);
         setState("signed-out");
@@ -46,6 +58,7 @@ export function Account({
         const body = await response.json();
         if (!active || current !== sequence) return;
         setVerifiedUid(response.ok ? user.uid : null);
+        if (body.error?.code === "DATA_DELETED") setDeletionUid(user.uid);
         onAuthorizationChange?.(response.ok ? user.uid : null);
         setState(response.ok ? "allowed" : "denied");
         setMessage(response.ok ? copy.account.allowed : body.error.message);
@@ -77,6 +90,9 @@ export function Account({
   return (
     <section className="account" aria-label={copy.account.label}>
       {verifiedUid && <AppWarmup uid={verifiedUid} />}
+      {(verifiedUid || deletionUid) && (
+        <AccountDataControls uid={(verifiedUid || deletionUid)!} />
+      )}
       {state === "loading" && <p role="status">{copy.account.loading}</p>}
       {state === "setup" && <p>{copy.setup}</p>}
       {state === "signed-out" && (
