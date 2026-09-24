@@ -2,7 +2,7 @@
 
 Private Hong Kong restaurant decision app. Behavior is governed by [EC2EAT_IMPLEMENTATION_SPEC.md](EC2EAT_IMPLEMENTATION_SPEC.md); technical contracts by [EC2EAT_ARCHITECTURE.md](EC2EAT_ARCHITECTURE.md).
 
-**Current scope: M1 foundation and M2 swipe UI.** Home/history/privacy shells, Firebase Google sign-in, server allowlist, isolated read repositories, runtime domain schemas, provider interfaces, emulator rules/indexes and verification. The home page links to an explicitly labeled `/demo` with three fixed fixture questions. It supports left/right/up swipes, matching buttons/arrow keys, reduced motion and a simulated lost-response retry. Answers stay in page memory; adaptive decisions and server persistence follow in M3. No restaurants, visits or AI responses are represented as live data. No cloud resources have been created.
+**Current scope: M1–M3 implemented.** `/decide` provides an authenticated, persisted adaptive flow with all 22 binary templates, deterministic ranking, neutral answers, an occasional category grid and a six-question cap. Refresh resumes the saved session. The separate `/demo` remains a synthetic swipe/retry preview. Restaurant search is explicitly unavailable until M6; no restaurants, visits or AI responses are represented as live data. No cloud resources have been created.
 
 ## Local setup
 
@@ -42,11 +42,11 @@ CI performs these checks with Java 21 and no paid API credentials. Unit tests us
 
 - `app/`, `components/`: mobile-first Traditional Chinese shell, Google login UI, `DecisionSwipeCard` and fixture demo.
 - `lib/fixtures/`: synthetic questions and an in-memory idempotent demo transport; no production authentication or data access.
-- `lib/domain/`: versioned session, question, preference, answer and outcome validation; transition guard.
-- `lib/server/`: verified Google identity + enabled UID allowlist, origin/body validation, private API envelopes, UTC/Firestore conversion and UID-scoped repository.
+- `lib/domain/`: versioned schemas, 22-template catalog, uncertain meal archetypes, deterministic scoring, adaptive question selection and transition guard.
+- `lib/server/`: verified Google identity + enabled UID allowlist, origin/body validation, private API envelopes, UTC/Firestore conversion and UID-scoped transactional session writes with idempotent retries.
 - `lib/providers/`: asynchronous abortable provider contracts, fixed-wording fallback and explicit unavailable Places adapter. Laya scoring and Gemini/Google live adapters are not implemented yet.
 - `tests/`: synthetic fixtures, authorization/domain tests and emulator acceptance tests.
-- `firestore.rules`, `firestore.indexes.json`: client denial, history/pending indexes and seven-day operation cleanup field (expiry is set by later write orchestration).
+- `firestore.rules`, `firestore.indexes.json`: client denial, history/pending indexes and seven-day operation expiry and response index exclusion.
 
 ## Configuration and release gates
 

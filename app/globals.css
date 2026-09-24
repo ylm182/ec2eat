@@ -505,3 +505,12 @@ footer {
     padding: 22px 12px;
   }
 }
+.category-question { padding: 20px 0; }
+.category-question h2 { font-size: 23px; line-height: 1.6; }
+.category-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.category-grid button { min-height: 65px; padding: 15px; border: 1px solid #a3ae97; border-radius: 12px; background: #fcfaf5; color: var(--ink); }
+.category-grid button:disabled { opacity: .5; }
+.live-decision { margin-top: 24px; }
+.live-decision label { display: block; margin-bottom: 12px; }
+.live-decision select { width: 100%; min-height: 48px; border: 1px solid #a3ae97; border-radius: 10px; padding: 10px; color: var(--ink); background: #fcfaf5; font: inherit; }
+.live-decision li { margin: 15px 0; line-height: 1.8; }

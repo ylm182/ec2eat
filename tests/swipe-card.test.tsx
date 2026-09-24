@@ -12,6 +12,7 @@ import {
 } from "@testing-library/react";
 import {
   DecisionSwipeCard,
+  DecisionCategoryCard,
   type DecisionSwipeCardProps,
 } from "../components/DecisionSwipeCard";
 import { demoQuestions } from "../lib/fixtures/swipe-demo";
@@ -295,5 +296,55 @@ describe("buttons, keyboard and saving", () => {
     fireEvent.keyDown(screen.getByRole("region"), { key: "ArrowUp" });
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
     expect(onSubmit.mock.calls[0][0]).toMatchObject({ action: "neutral" });
+  });
+});
+
+describe("categorical grid shares safe submission without swipe gestures", () => {
+  const category = {
+    instanceId: "category-q",
+    definition: {
+      id: "category-01",
+      version: 1,
+      kind: "category" as const,
+      prompt: "揀邊類？",
+      options: [
+        { id: "rice", categoryId: "rice", label: "飯" },
+        { id: "noodles", categoryId: "noodles", label: "麵" },
+      ],
+      contextTags: [],
+    },
+  };
+  it("sends a category ID once, never a position or numeric value", async () => {
+    const onSubmit = vi.fn<DecisionSwipeCardProps["onSubmit"]>(async () => {});
+    const { container } = render(
+      <DecisionCategoryCard
+        {...base}
+        question={category}
+        onSubmit={onSubmit}
+      />,
+    );
+    expect(container.querySelector(".tinder-question")).toBeNull();
+    await userEvent.setup().click(screen.getByRole("button", { name: "飯" }));
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(onSubmit.mock.calls[0][0]).toMatchObject({
+      action: "category",
+      optionId: "rice",
+    });
+    expect(onSubmit.mock.calls[0][0]).not.toHaveProperty("value");
+  });
+  it("neutral is a distinct action on the category grid too", async () => {
+    const onSubmit = vi.fn<DecisionSwipeCardProps["onSubmit"]>(async () => {});
+    render(
+      <DecisionCategoryCard
+        {...base}
+        question={category}
+        onSubmit={onSubmit}
+      />,
+    );
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "都可以" }));
+    expect(onSubmit.mock.calls[0][0]).toMatchObject({ action: "neutral" });
+    expect(onSubmit.mock.calls[0][0]).not.toHaveProperty("optionId");
   });
 });

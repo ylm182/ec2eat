@@ -32,14 +32,26 @@ export async function parseBody<T>(
 }
 export async function apiResponse(
   run: () => Promise<unknown>,
-  requestId = crypto.randomUUID(),
+  requestId: string | (() => string) = crypto.randomUUID(),
 ) {
   const headers = {
     "Cache-Control": "private, no-store",
     Vary: "Authorization, Origin",
   };
   try {
-    return Response.json({ data: await run(), requestId }, { headers });
+    const data = await run();
+    const revision =
+      data && typeof data === "object" && "revision" in data
+        ? data.revision
+        : undefined;
+    return Response.json(
+      {
+        data,
+        revision,
+        requestId: typeof requestId === "function" ? requestId() : requestId,
+      },
+      { headers },
+    );
   } catch (error) {
     const safe =
       error instanceof ApiError
@@ -59,7 +71,7 @@ export async function apiResponse(
           message: safe.message,
           retryable: safe.retryable,
         },
-        requestId,
+        requestId: typeof requestId === "function" ? requestId() : requestId,
       },
       { status: safe.status, headers },
     );

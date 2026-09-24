@@ -1,0 +1,18 @@
+export const decisionCopy = {
+  heading: "今餐，一步步揀。",
+  areaLabel: "你而家喺邊區？",
+  chooseArea: "請選擇地區",
+  start: "幫我揀",
+  resume: "載入今次選擇…",
+  retry: "重試",
+  context: "先揀地區；暫時未接駁定位、天氣或 Calendar。",
+  unavailable: "答案已儲存。餐廳搜尋未接通，暫時未有餐廳推薦。",
+  show: "睇選擇",
+  newDecision: "開始另一次選擇",
+  loading: "儲存中…",
+  trail: "今次點樣揀",
+  either: "都可以",
+  login: "請先用獲邀 Google 帳戶登入。",
+  error: "暫時未能完成，請重試。",
+  unknown: "登入已失效，請重新登入。",
+};

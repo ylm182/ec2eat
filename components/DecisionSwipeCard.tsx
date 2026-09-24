@@ -35,6 +35,14 @@ const directionFor = (answer: SwipeSubmission): AnswerDirection =>
 
 // A changed instance gets an independent lock/request ID and cannot inherit a late callback.
 export function DecisionSwipeCard(props: DecisionSwipeCardProps) {
+  if (props.question.definition.kind !== "binary")
+    throw new Error("Binary question required");
+  return <QuestionCard key={props.question.instanceId} {...props} />;
+}
+
+export function DecisionCategoryCard(props: DecisionSwipeCardProps) {
+  if (props.question.definition.kind !== "category")
+    throw new Error("Category question required");
   return <QuestionCard key={props.question.instanceId} {...props} />;
 }
 
@@ -51,11 +59,11 @@ function QuestionCard({
   const right = question.definition.options.find(
     (option) => option.id === "right",
   );
-  if (question.definition.kind !== "binary" || !left || !right)
+  if (question.definition.kind === "binary" && (!left || !right))
     throw new Error("DecisionSwipeCard requires an issued binary question");
   const labels = {
-    left: left.label,
-    right: right.label,
+    left: left?.label ?? "",
+    right: right?.label ?? "",
     up: copy.swipe.either,
   };
   const [status, setStatus] = useState<Status>("idle");
@@ -146,23 +154,30 @@ function QuestionCard({
       handlers.current.onAnswered?.(answer);
   }, []);
 
-  const submit = useCallback(
-    (direction: Direction) => {
+  const commit = useCallback(
+    (direction: Direction | "category", optionId?: string) => {
       if (direction === "down" || !mounted.current || operation.current) return;
       const answer: SwipeSubmission = {
         requestId: crypto.randomUUID(),
         expectedRevision,
         questionInstanceId: question.instanceId,
         action: direction === "up" ? "neutral" : direction,
-        ...(direction === "up" ? {} : { optionId: direction }),
+        ...(direction === "up"
+          ? {}
+          : { optionId: direction === "category" ? optionId : direction }),
       };
       // Synchronous guard covers gesture + button + keyboard events in the same render frame.
       operation.current = answer;
       setPending(answer);
-      setHighlight(direction);
+      setHighlight(direction === "category" ? null : direction);
       void save(answer);
     },
     [expectedRevision, question.instanceId, save],
+  );
+
+  const submit = useCallback(
+    (direction: Direction) => commit(direction),
+    [commit],
   );
 
   // These props must remain stable while feedback state changes: the library reattaches
@@ -179,6 +194,7 @@ function QuestionCard({
       void save(operation.current);
   };
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (question.definition.kind === "category") return;
     if (
       event.repeat ||
       event.altKey ||
@@ -200,7 +216,12 @@ function QuestionCard({
     event.preventDefault();
     submit(direction);
   };
-  const chosen = pending ? labels[directionFor(pending)] : null;
+  const chosen = pending
+    ? pending.action === "category"
+      ? question.definition.options.find((o) => o.id === pending.optionId)
+          ?.label
+      : labels[directionFor(pending)]
+    : null;
   const active = pending ? directionFor(pending) : highlight;
 
   return (
@@ -222,75 +243,107 @@ function QuestionCard({
         </span>
       </div>
       <p id={instructionsId} className="swipe-instructions">
-        {copy.swipe.instructions}
+        {question.definition.kind === "binary"
+          ? copy.swipe.instructions
+          : copy.swipe.categoryInstructions}
       </p>
-      <div className="direction-labels" aria-hidden="true">
-        <span data-active={active === "left"}>← {left.label}</span>
-        <span data-active={active === "up"}>↑ {copy.swipe.either}</span>
-        <span data-active={active === "right"}>{right.label} →</span>
-      </div>
-      <div
-        ref={surface}
-        className="swipe-surface"
-        data-reduced-motion={reducedMotion}
-        data-locked={status !== "idle"}
-        onMouseDownCapture={() =>
-          region.current?.focus({ preventScroll: true })
-        }
-      >
-        <TinderCard
-          key={`${question.instanceId}-${recovery}`}
-          className="tinder-question"
-          preventSwipe={PREVENT_DOWN}
-          swipeRequirementType="position"
-          swipeThreshold={threshold}
-          onSwipe={submit}
-          onSwipeRequirementFulfilled={fulfilled}
-          onSwipeRequirementUnfulfilled={unfulfilled}
-        >
-          <article className="question-face" data-direction={active ?? "none"}>
-            <span className="question-symbol" aria-hidden="true">
-              ✳
-            </span>
-            <h2 id={promptId}>{question.definition.prompt}</h2>
-            <div className="question-options">
-              <span>{left.label}</span>
-              <span aria-hidden="true">/</span>
-              <span>{right.label}</span>
-            </div>
-            <p className="card-footnote">{copy.swipe.noWrongAnswer}</p>
-          </article>
-        </TinderCard>
-      </div>
-      <div className="answer-buttons" aria-label={copy.swipe.actions}>
-        <button
-          type="button"
-          disabled={status !== "idle"}
-          aria-label={`${copy.swipe.left}：${left.label}`}
-          onClick={() => submit("left")}
-        >
-          <span aria-hidden>←</span>
-          {left.label}
-        </button>
-        <button
-          type="button"
-          disabled={status !== "idle"}
-          aria-label={`${copy.swipe.up}：${copy.swipe.either}`}
-          onClick={() => submit("up")}
-        >
-          <span aria-hidden>↑</span>
-          {copy.swipe.either}
-        </button>
-        <button
-          type="button"
-          disabled={status !== "idle"}
-          aria-label={`${copy.swipe.right}：${right.label}`}
-          onClick={() => submit("right")}
-        >
-          <span aria-hidden>→</span>
-          {right.label}
-        </button>
-      </div>
+      {question.definition.kind === "category" ? (
+        <section className="category-question">
+          <h2 id={promptId}>{question.definition.prompt}</h2>
+          <div className="category-grid">
+            {question.definition.options.map((option) => (
+              <button
+                type="button"
+                key={option.id}
+                disabled={status !== "idle"}
+                onClick={() => commit("category", option.id)}
+              >
+                {option.label}
+              </button>
+            ))}
+            <button
+              type="button"
+              disabled={status !== "idle"}
+              onClick={() => submit("up")}
+            >
+              {copy.swipe.either}
+            </button>
+          </div>
+        </section>
+      ) : (
+        <>
+          <div className="direction-labels" aria-hidden="true">
+            <span data-active={active === "left"}>← {left!.label}</span>
+            <span data-active={active === "up"}>↑ {copy.swipe.either}</span>
+            <span data-active={active === "right"}>{right!.label} →</span>
+          </div>
+          <div
+            ref={surface}
+            className="swipe-surface"
+            data-reduced-motion={reducedMotion}
+            data-locked={status !== "idle"}
+            onMouseDownCapture={() =>
+              region.current?.focus({ preventScroll: true })
+            }
+          >
+            <TinderCard
+              key={`${question.instanceId}-${recovery}`}
+              className="tinder-question"
+              preventSwipe={PREVENT_DOWN}
+              swipeRequirementType="position"
+              swipeThreshold={threshold}
+              onSwipe={submit}
+              onSwipeRequirementFulfilled={fulfilled}
+              onSwipeRequirementUnfulfilled={unfulfilled}
+            >
+              <article
+                className="question-face"
+                data-direction={active ?? "none"}
+              >
+                <span className="question-symbol" aria-hidden="true">
+                  ✳
+                </span>
+                <h2 id={promptId}>{question.definition.prompt}</h2>
+                <div className="question-options">
+                  <span>{left!.label}</span>
+                  <span aria-hidden="true">/</span>
+                  <span>{right!.label}</span>
+                </div>
+                <p className="card-footnote">{copy.swipe.noWrongAnswer}</p>
+              </article>
+            </TinderCard>
+          </div>
+          <div className="answer-buttons" aria-label={copy.swipe.actions}>
+            <button
+              type="button"
+              disabled={status !== "idle"}
+              aria-label={`${copy.swipe.left}：${left!.label}`}
+              onClick={() => submit("left")}
+            >
+              <span aria-hidden>←</span>
+              {left!.label}
+            </button>
+            <button
+              type="button"
+              disabled={status !== "idle"}
+              aria-label={`${copy.swipe.up}：${copy.swipe.either}`}
+              onClick={() => submit("up")}
+            >
+              <span aria-hidden>↑</span>
+              {copy.swipe.either}
+            </button>
+            <button
+              type="button"
+              disabled={status !== "idle"}
+              aria-label={`${copy.swipe.right}：${right!.label}`}
+              onClick={() => submit("right")}
+            >
+              <span aria-hidden>→</span>
+              {right!.label}
+            </button>
+          </div>
+        </>
+      )}
       <div className="answer-status" id={statusId}>
         <p role="status" aria-live="polite">
           {chosen

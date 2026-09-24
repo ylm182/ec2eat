@@ -8,10 +8,11 @@ export const copy = {
   logout: "登出",
   private: "你嘅私人搵食小幫手",
   setup: "登入服務尚未設定。設定完成後，就可以用獲邀帳戶登入。",
-  foundation: "決策功能準備中",
-  foundationDetail: "可以先試下問題卡。示範唔會搜尋餐廳或儲存記錄。",
+  foundation: "幾條問題，慢慢縮窄選擇",
+  foundationDetail: "登入後可以儲存今次答案；餐廳搜尋仍未接通。",
   demoEntry: "試下點揀 · 示範",
   swipe: {
+    categoryInstructions: "揀一類，或者都可以。可以用 Tab 移到選項，再撳 Enter。",
     either: "都可以",
     question: "跟住而家嘅心情揀",
     progress: "問題",

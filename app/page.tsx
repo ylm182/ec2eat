@@ -26,15 +26,16 @@ export default function Home() {
         <p className="eyebrow">{copy.private}</p>
         <Link
           className="primary"
-          href="/demo"
+          href="/decide"
           aria-describedby="foundation-note"
         >
-          {copy.demoEntry}
+          {copy.decide}
           <span aria-hidden>→</span>
         </Link>
         <p id="foundation-note" className="hint">
           {copy.foundation} · {copy.foundationDetail}
         </p>
+        <Link className="history-link" href="/demo">{copy.demoEntry}<span aria-hidden>↗</span></Link>
         <Link className="history-link" href="/history">
           {copy.history}
           <span aria-hidden>↗</span>

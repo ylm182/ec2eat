@@ -11,9 +11,15 @@ export type Feature = {
 export type DecisionInput = {
   version: 1;
   stage: "archetype" | "restaurant";
-  candidates: { id: string; features: Partial<Record<Dimension, Feature>> }[];
+  candidates: {
+    id: string;
+    categoryId?: string;
+    distanceM?: number;
+    features: Partial<Record<Dimension, Feature>>;
+  }[];
   preferences: Record<Dimension, Preference>;
   priors: Partial<Record<Dimension, Preference>>;
+  categoryPreference?: string | null;
   context: { rain: boolean | null; nextEventSoon: boolean | null };
 };
 export type DecisionResult = {

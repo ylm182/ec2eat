@@ -8,7 +8,11 @@ import {
 } from "firebase/auth";
 import { clientAuth } from "@/lib/client/firebase";
 import { copy } from "@/lib/copy";
-export function Account() {
+export function Account({
+  onAuthorizationChange,
+}: {
+  onAuthorizationChange?: (uid: string | null) => void;
+}) {
   const [state, setState] = useState<
     "loading" | "setup" | "signed-out" | "allowed" | "denied"
   >("loading");
@@ -25,9 +29,11 @@ export function Account() {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       const current = ++sequence;
       if (!user) {
+        onAuthorizationChange?.(null);
         setState("signed-out");
         return;
       }
+      onAuthorizationChange?.(null);
       setState("loading");
       try {
         const response = await fetch("/api/profile", {
@@ -36,10 +42,12 @@ export function Account() {
         });
         const body = await response.json();
         if (!active || current !== sequence) return;
+        onAuthorizationChange?.(response.ok ? user.uid : null);
         setState(response.ok ? "allowed" : "denied");
         setMessage(response.ok ? copy.account.allowed : body.error.message);
       } catch {
         if (active && current === sequence) {
+          onAuthorizationChange?.(null);
           setState("denied");
           setMessage(copy.account.connectionFailed);
         }
@@ -49,7 +57,7 @@ export function Account() {
       active = false;
       unsubscribe();
     };
-  }, []);
+  }, [onAuthorizationChange]);
   async function login() {
     setBusy(true);
     setMessage("");

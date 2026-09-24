@@ -16,8 +16,8 @@ Session transitions and delayed outcome rules are compatible. `GET /api/profile`
 
 1. **M1 — foundation (implemented, locally verified):** Next.js/TypeScript shell, private authentication, domain schemas, UID-scoped server reads, provider contracts, rules/indexes, local setup and CI.
 2. **M2 — swipe UI (implemented, locally verified):** `DecisionSwipeCard` using the pinned `react-tinder-card`; left/right/up, inert down, threshold feedback, common guarded tap/keyboard path, retry with stable request ID, reduced motion and mobile touch/scroll checks. Use clearly labeled synthetic fixtures.
-3. **M3 — adaptive engine (next):** all 22 templates/11 dimensions, app-authored archetypes, deterministic scoring, known/neutral distinction, variance questions, categorical exception, stop-by-six and server session orchestration with transactions/idempotency. Complete the mocked vertical slice.
-4. **M4 — context:** explicit location or manual district, independent Calendar/Weather failure handling and validated Gemini extraction with fixed-template fallback.
+3. **M3 — adaptive engine (implemented, locally verified):** all 22 templates/11 dimensions, app-authored archetypes, deterministic scoring, known/neutral distinction, variance questions, categorical exception, stop-by-six and server session orchestration with transactions/idempotency. Complete the mocked vertical slice.
+4. **M4 — context (next):** explicit location or manual district, independent Calendar/Weather failure handling and validated Gemini extraction with fixed-template fallback.
 5. **M5 — Laya:** real HF recipe fixture and pinned revision, bounded scoring fallback, lease/circuit behavior, app-open warm-up and authenticated 11:00/17:00 HKT scheduled function.
 6. **M6 — restaurants:** real Places shortlist only, content policy/attribution, idempotent explicit selection, Maps after persistence, honest empty/error states.
 7. **M7 — history:** immutable selection snapshots, paginated history and accessible flip-to-trail cards independent of refreshed Places content.
@@ -71,3 +71,19 @@ Verification completed:
 - Browser gestures were mouse-driven at mobile dimensions; touch events and reduced-motion media were exercised in component tests. A physical mobile-device touch smoke test remains a release check; do not describe this as device-lab coverage.
 
 No new live integration blocker was introduced. Existing deployment/provider/audit gates remain as documented above. M3 will replace fixed question ordering with the adaptive catalog and deterministic engine and connect authoritative session writes.
+
+## M3 implementation and verification · 24 September 2026
+
+The authenticated `/decide` flow now uses all 22 fixed templates across eleven dimensions, seven app-authored meal archetypes and a deterministic scorer. Archetypes are uncertain search concepts, not restaurant facts. Unknown distance/novelty stay unknown. Answers derive values from the frozen server-issued question; neutral has zero evidence weight and suppresses priors. Speed/healthiness polarity, confidence-weighted utility, distance/price penalties, stable tie-breaking and softmax temperature .25 follow the architecture.
+
+The next question uses top-five known-feature variance, context relevance and remaining uncertainty. No dimension repeats. Stops record `weight_margin`, `max_questions`, `exhausted` or `user_requested`; confidence requires three answers, top weight .70 and margin .20, with a hard six-answer cap. Ranking weights are not enjoyment probabilities.
+
+Documented defaults: the category exception requires at least two binary answers, different known categories, maximum category mass ≤.55 and top-two weight gap <.10. At most one category question counts toward six. Its selected category contributes one unit of match/mismatch evidence to the heuristic weighted mean; it is not a numeric preference dimension or restaurant filter. Category choices use native grid buttons and a separate neutral button, never swipe gestures.
+
+M3 accepts twelve manual districts. GPS is deferred to M4. HKT lunch defaults to 11:00–14:59 and dinner to 17:00–21:59; other hours use `other`. Weather and Calendar remain absent. Existing valid inferred profile priors may be snapshotted with their version and bounded influence; learning updates remain M9. Gemini and Laya are not called. The heuristic provider explicitly reports `laya_not_configured`.
+
+Session writes are UID-scoped Firestore transactions with persisted issued questions, expected revisions, server timestamps, strict bodies, immutable replay responses and seven-day operation expiry. Reusing an ID with a different body returns 409. Competing answers commit once. Defaults are 30 creates/240 total mutations per user per hour. Refresh uses only a UID-scoped local session pointer; create retries retain the original request body. Restaurant recommendation remains an explicit 503 after the stop is saved; no shortlist, selection or visit is invented.
+
+Verification: 55 unit/component tests and 5 Auth/Firestore emulator integration tests passed. Coverage includes variance-driven question changes, neutral versus unknown, categorical IDs/evidence, all-neutral termination, exact replay after later mutations, concurrent retries/competing answers, expired-operation duplicate protection, cross-user denial, Origin/strict-body checks and durable stop on unavailable Places. Typecheck, production build and browser-secret canary scan passed. M2 gesture coverage remains in the suite. Browser verification is recorded below; physical-device and live-provider checks remain release gates.
+
+Browser limitation: `/decide` rendered correctly, but the embedded browser did not expose a usable Auth emulator popup. Full signed-in refresh/answer UI acceptance is therefore unverified here; authenticated persistence/retrieval and replay passed the actual emulator integration suite. No authentication bypass was introduced.
