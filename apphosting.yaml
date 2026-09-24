@@ -9,43 +9,54 @@ runConfig:
 env:
   - variable: APP_MODE
     value: live
-    availability: [RUNTIME]
+    availability: [ RUNTIME ]
   - variable: APP_ORIGIN
     value: https://ec2eat--ec2eat-davidyu-prod.asia-east1.hosted.app
-    availability: [RUNTIME]
+    availability: [ RUNTIME ]
   - variable: GOOGLE_CLOUD_PROJECT
     value: ec2eat-davidyu-prod
-    availability: [RUNTIME]
+    availability: [ RUNTIME ]
   - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
     value: ec2eat-davidyu-prod
-    availability: [BUILD, RUNTIME]
+    availability: [ BUILD, RUNTIME ]
   - variable: NEXT_PUBLIC_FIREBASE_API_KEY
     value: AIzaSyAqSXmhwGxIXEeZIakK1qUb_Te5cfduccI
-    availability: [BUILD, RUNTIME]
+    availability: [ BUILD, RUNTIME ]
   - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
     value: ec2eat-davidyu-prod.firebaseapp.com
-    availability: [BUILD, RUNTIME]
+    availability: [ BUILD, RUNTIME ]
   - variable: GEMINI_MODEL
     value: gemini-3.5-flash-lite
-    availability: [RUNTIME]
+    availability: [ RUNTIME ]
   - variable: VERTEX_LOCATION
     value: global
-    availability: [RUNTIME]
+    availability: [ RUNTIME ]
   - variable: GEMINI_CONTEXT_ENABLED
     value: "false"
-    availability: [RUNTIME]
+    availability: [ RUNTIME ]
+  - variable: OAUTH_CLIENT_ID
+    value: 557108996706-08d9o7fmglef6e1kbuv9l3i2c8nec856.apps.googleusercontent.com
+    availability: [ RUNTIME ]
   - variable: PLACES_CONTENT_USE_APPROVED
     value: "true"
-    availability: [RUNTIME]
+    availability: [ RUNTIME ]
   - variable: GOOGLE_PLACES_API_KEY
     secret: GOOGLE_PLACES_API_KEY@2
-    availability: [RUNTIME]
+    availability: [ RUNTIME ]
   - variable: PLACES_MODEL_INPUT_APPROVED
     value: "false"
-    availability: [RUNTIME]
+    availability: [ RUNTIME ]
   - variable: GOOGLE_WEATHER_PERSIST_APPROVED
     value: "false"
-    availability: [RUNTIME]
+    availability: [ RUNTIME ]
+  - variable: OAUTH_CLIENT_SECRET
+    secret: OAUTH_CLIENT_SECRET@1
+    availability: [ RUNTIME ]
+  - variable: CALENDAR_KMS_KEY
+    value: projects/ec2eat-davidyu-prod/locations/asia-east2/keyRings/ec2eat/cryptoKeys/calendar-tokens
+    availability: [ RUNTIME ]
+
 # Firebase browser configuration is public; server secrets must use Secret Manager.
 # Places display/search enabled for initial live verification; model input stays off.
-# Calendar, Gemini, Weather and Laya still require their separate integration setup.
+# Calendar configuration awaits KMS access, rollout and live verification.
+# Gemini, Weather and Laya still require their separate integration setup.
