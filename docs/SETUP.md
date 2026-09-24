@@ -78,3 +78,15 @@ Budgets: nearby 4 seconds; each text 2.5 seconds; whole search 12 seconds includ
 Recommendation and selection routes accept only verified allowed identities, strict input, Origin and revision checks. Selection refreshes status without loading photo media and saves pending outcome eligibility at selection +4 hours. Current card details are request-lifetime/no-store, membership-scoped to the session and preserve shortlist order. Preview synthetic IDs cannot cross into the live provider.
 
 Transient GPS stays in page memory until search; reload intentionally falls back to the district centre. Displayed straight-line distance is from that labelled district centre, not an ETA and not a claim of current GPS distance. Restaurant taste/cuisine features remain unknown; no unsupported tags are inferred from Google text. Small valid pools may yield one card rather than filling the list with invented choices.
+
+## M7 history
+
+`GET /api/history?cursor=...` returns selected sessions only, newest first, 20 records per page with one lookahead record. Ordering is `selectedAt DESC, document ID DESC`; the existing `status ASC, selectedAt DESC` composite index supplies the implicit same-direction document-ID tie-breaker. Deploy/verify that index in the actual project before live acceptance; emulator success does not prove production index availability.
+
+The canonical base64url cursor contains a session ID, not a user ID or trusted timestamp. Its anchor is resolved only inside the authenticated user's collection and must still be selected. Pagination uses the raw Firestore document snapshot to preserve timestamp nanoseconds. Invalid/missing/foreign/unfinished anchors yield 422 and the UI offers a latest-page refresh. Newer inserts do not shift older page boundaries; no full-history listener or client Firestore access is introduced.
+
+`GET /api/history/:sessionId/restaurant` is a session-scoped extension to the planned generic restaurant-details endpoint. It checks selected-session ownership and fetches only the selected ID; it does not allow arbitrary ID lookups. It reuses M6's provider source guard, five-second details budget, optional photo handling, no-store response and per-user provider budget. The History UI loads details as cards enter the viewport, keeps them only in component memory, and offers manual retry. If IntersectionObserver is unavailable, manual refresh remains available.
+
+History reads never score, rewrite templates, select, confirm visits or recompute priors. The current outcome is displayed separately from the frozen decision. Expired or nonpersistable Weather/Calendar fields are omitted in the history read projection while app-owned question wording and answers remain intact; this is not a database retention-cleanup job. The existing retention-policy/cleanup release gates still apply. Current restaurant content stays separate from the durable session and replay records.
+
+See [M7 frontend acceptance](M7_FRONTEND_TESTS.md). No additional credentials, migrations, paid services or region changes are required for local M7 use.

@@ -228,43 +228,50 @@ export function restaurantRepository(
         );
       }
     },
-    async cards(id: string) {
+    async cards(id: string, selectedOnly = false) {
       const s = await get(id);
+      if (selectedOnly && s.status !== "SELECTED")
+        throw new ApiError(404, "NOT_FOUND", "搵唔到呢次已儲存選擇。");
       if (!["READY", "SELECTED"].includes(s.status)) return { cards: [] };
       const p = matchingProvider(s);
       await budget();
       const cards = await Promise.all(
-        s.decision.candidates.slice(0, 3).map(async (c) => {
-          try {
-            return await bounded(5000, (signal) =>
-              p.details(
-                c.placeId,
-                signal,
-                true,
-                resolveLocation({ area: s.context.area }).location,
-              ),
-            );
-          } catch {
-            return {
-              distanceM: null,
-              placeId: c.placeId,
-              name: null,
-              address: null,
-              businessStatus: null,
-              openNow: null,
-              priceLevel: null,
-              rating: null,
-              mapsUri: null,
-              photo: null,
-              attributions: [],
-              available: false,
-              fetchedAt: new Date().toISOString(),
-              source: p.source,
-              persistAllowed: false,
-              modelInputAllowed: false,
-            } satisfies RestaurantCard;
-          }
-        }),
+        s.decision.candidates
+          .filter(
+            (c) => !selectedOnly || c.placeId === s.decision.selectedPlaceId,
+          )
+          .slice(0, selectedOnly ? 1 : 3)
+          .map(async (c) => {
+            try {
+              return await bounded(5000, (signal) =>
+                p.details(
+                  c.placeId,
+                  signal,
+                  true,
+                  resolveLocation({ area: s.context.area }).location,
+                ),
+              );
+            } catch {
+              return {
+                distanceM: null,
+                placeId: c.placeId,
+                name: null,
+                address: null,
+                businessStatus: null,
+                openNow: null,
+                priceLevel: null,
+                rating: null,
+                mapsUri: null,
+                photo: null,
+                attributions: [],
+                available: false,
+                fetchedAt: new Date().toISOString(),
+                source: p.source,
+                persistAllowed: false,
+                modelInputAllowed: false,
+              } satisfies RestaurantCard;
+            }
+          }),
       );
       return { cards };
     },

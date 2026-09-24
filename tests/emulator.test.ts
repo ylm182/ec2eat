@@ -936,3 +936,207 @@ describe("M6 restaurant transactions", () => {
     expect(response.headers.get("cache-control")).toBe("private, no-store");
   });
 });
+
+describe("M7 selected-session history", () => {
+  async function setup(name: string) {
+    const identity = await googleToken(name);
+    const { db } = adminServices();
+    await db.doc("allowedUsers/" + identity.uid).set({ enabled: true });
+    const user = await authenticate(request(identity.token));
+    const { historyRepository } = await import("../lib/server/history");
+    return { db, user, identity, repo: historyRepository(db, user) };
+  }
+  async function seed(
+    db: ReturnType<typeof adminServices>["db"],
+    uid: string,
+    id: string,
+    selected = true,
+  ) {
+    const { selectedFixture } = await import("./fixtures");
+    const s = selected ? selectedFixture() : sessionFixture(uid);
+    s.uid = uid;
+    s.id = id;
+    s.context.area = "中環";
+    if (selected)
+      s.search = {
+        radiusM: 1500,
+        expanded: false,
+        result: "ready",
+        source: "synthetic",
+        centreSource: "manual",
+      };
+    await db
+      .doc("users/" + uid + "/sessions/" + id)
+      .set(encodeDocument(s) as Record<string, unknown>);
+    return s;
+  }
+  it("paginates 20 selected sessions by timestamp and ID; repeated places stay separate, new inserts do not duplicate older pages", async () => {
+    const { db, user, repo } = await setup("history-pages");
+    for (let i = 0; i < 25; i++)
+      await seed(db, user.uid, "selection-" + String(i).padStart(2, "0"));
+    await seed(db, user.uid, "unfinished", false);
+    const first = await repo.page();
+    expect(first.sessions).toHaveLength(20);
+    expect(first.sessions[0].id).toBe("selection-24");
+    expect(
+      new Set(first.sessions.map((s) => s.decision.selectedPlaceId)).size,
+    ).toBe(1);
+    const inserted = await seed(db, user.uid, "newest");
+    inserted.selectedAt = "2026-09-25T04:00:00.000Z";
+    inserted.outcome.eligibleAfter = "2026-09-25T08:00:00.000Z";
+    await db
+      .doc("users/" + user.uid + "/sessions/newest")
+      .set(encodeDocument(inserted) as Record<string, unknown>);
+    const second = await repo.page(first.nextCursor!);
+    expect(second.sessions.map((s) => s.id)).toEqual([
+      "selection-04",
+      "selection-03",
+      "selection-02",
+      "selection-01",
+      "selection-00",
+    ]);
+    expect(second.nextCursor).toBeNull();
+    expect((await repo.page()).sessions[0].id).toBe("newest");
+    expect(
+      new Set([...first.sessions, ...second.sessions].map((s) => s.id)).size,
+    ).toBe(25);
+  });
+  it("unknown, unfinished, malformed and other-user cursor anchors cannot expose history", async () => {
+    const owner = await setup("history-owner");
+    const other = await setup("history-other");
+    await seed(owner.db, owner.user.uid, "private");
+    await seed(other.db, other.user.uid, "unfinished", false);
+    const { encodeHistoryCursor } = await import("../lib/server/history");
+    expect((await other.repo.page()).sessions).toEqual([]);
+    for (const cursor of [
+      encodeHistoryCursor("private"),
+      encodeHistoryCursor("unfinished"),
+      encodeHistoryCursor("missing"),
+      "bad!",
+    ])
+      await expect(other.repo.page(cursor)).rejects.toMatchObject({
+        code: "INVALID_CURSOR",
+      });
+  });
+  it("uses raw snapshot nanoseconds for cursor boundaries and rejects a deleted anchor", async () => {
+    const { Timestamp } = await import("firebase-admin/firestore");
+    const { db, user, repo } = await setup("history-precision");
+    for (let i = 0; i < 22; i++) {
+      const id = "precise-" + String(i).padStart(2, "0");
+      await seed(db, user.uid, id);
+      await db
+        .doc("users/" + user.uid + "/sessions/" + id)
+        .update({ selectedAt: new Timestamp(1790222400, i * 1000) });
+    }
+    const first = await repo.page();
+    const second = await repo.page(first.nextCursor!);
+    expect(second.sessions.map((s) => s.id)).toEqual([
+      "precise-01",
+      "precise-00",
+    ]);
+    await db
+      .doc("users/" + user.uid + "/sessions/" + first.sessions.at(-1)!.id)
+      .delete();
+    await expect(repo.page(first.nextCursor!)).rejects.toMatchObject({
+      code: "INVALID_CURSOR",
+    });
+  });
+  it("history refresh fetches only the selected restaurant and failures leave the immutable trail readable", async () => {
+    const { db, user, repo } = await setup("history-details");
+    const s = await seed(db, user.uid, "saved");
+    s.decision.candidates = [
+      { placeId: "synthetic-0", score: 0.6, weight: 0.6 },
+      { placeId: "synthetic-2", score: 0.4, weight: 0.4 },
+    ];
+    s.decision.selectedPlaceId = "synthetic-2";
+    s.decision.recommendedPlaceId = "synthetic-0";
+    s.answers = [
+      {
+        questionInstanceId: s.questions[0].instanceId,
+        action: "neutral",
+        optionId: null,
+        value: null,
+        answeredAt: s.createdAt,
+        requestId: "original-answer",
+      },
+    ];
+    const path = db.doc("users/" + user.uid + "/sessions/saved");
+    await path.set(encodeDocument(s) as Record<string, unknown>);
+    const before = (await path.get()).data();
+    const { restaurantRepository } = await import("../lib/server/restaurants");
+    const { syntheticPlaces } = await import("../lib/server/places");
+    const provider = syntheticPlaces("results");
+    const details = provider.details;
+    const ids: string[] = [];
+    provider.details = async (...args) => {
+      ids.push(args[0]);
+      return details(...args);
+    };
+    const restaurants = restaurantRepository(db, user, () => provider);
+    expect(
+      (await restaurants.cards("saved", true)).cards.map((c) => c.placeId),
+    ).toEqual(["synthetic-2"]);
+    expect(ids).toEqual(["synthetic-2"]);
+    provider.details = async () => {
+      throw new Error("unavailable");
+    };
+    expect((await restaurants.cards("saved", true)).cards[0].available).toBe(
+      false,
+    );
+    const history = (await repo.page()).sessions[0];
+    expect(history.questions).toEqual(s.questions);
+    expect(history.answers).toEqual(s.answers);
+    expect(history.decision).toEqual(s.decision);
+    expect((await path.get()).data()).toEqual(before);
+    await seed(db, user.uid, "unfinished", false);
+    await expect(restaurants.cards("unfinished", true)).rejects.toMatchObject({
+      status: 404,
+    });
+  });
+  it("history endpoints enforce allowlist and ownership, reject extra query fields and use no-store responses", async () => {
+    const { db, user, identity } = await setup("history-route");
+    await seed(db, user.uid, "own");
+    const { GET } = await import("../app/api/history/route");
+    const { GET: detail } = await import(
+      "../app/api/history/[id]/restaurant/route"
+    );
+    expect(
+      (await GET(new Request("http://localhost:3000/api/history"))).status,
+    ).toBe(401);
+    const auth = { Authorization: "Bearer " + identity.token };
+    const response = await GET(
+      new Request("http://localhost:3000/api/history", { headers: auth }),
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect((await response.json()).data.sessions).toHaveLength(1);
+    for (const suffix of ["?uid=another", "?cursor=a&cursor=b"])
+      expect(
+        (
+          await GET(
+            new Request("http://localhost:3000/api/history" + suffix, {
+              headers: auth,
+            }),
+          )
+        ).status,
+      ).toBe(422);
+    expect(
+      (
+        await detail(
+          new Request("http://localhost:3000/api/history/foreign/restaurant", {
+            headers: auth,
+          }),
+          { params: Promise.resolve({ id: "foreign" }) },
+        )
+      ).status,
+    ).toBe(404);
+    await db.doc("allowedUsers/" + user.uid).set({ enabled: false });
+    expect(
+      (
+        await GET(
+          new Request("http://localhost:3000/api/history", { headers: auth }),
+        )
+      ).status,
+    ).toBe(403);
+  });
+});

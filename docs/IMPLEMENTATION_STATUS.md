@@ -20,7 +20,7 @@ Session transitions and delayed outcome rules are compatible. `GET /api/profile`
 4. **M4 — context (implemented; live activation and user frontend acceptance pending):** explicit location or manual district, independent Calendar/Weather failure handling and validated Gemini extraction with fixed-template fallback.
 5. **M5 — Laya (local infrastructure verified; live contract blocked):** real HF recipe fixture and pinned revision, bounded scoring fallback, lease/circuit behavior, app-open warm-up and authenticated 11:00/17:00 HKT scheduled function.
 6. **M6 — restaurants (implemented; live activation and user frontend acceptance pending):** real Places shortlist only, content policy/attribution, idempotent explicit selection, Maps after persistence, honest empty/error states.
-7. **M7 — history:** immutable selection snapshots, paginated history and accessible flip-to-trail cards independent of refreshed Places content.
+7. **M7 — history (implemented; user frontend acceptance pending):** immutable selection snapshots, paginated history and accessible flip-to-trail cards independent of refreshed Places content.
 8. **M8 — outcomes:** four-hour/new-opening eligibility, hidden-for-30-min definition, snooze for 24 hours, one prompt/opening, actual-other and correction/concurrency checks.
 9. **M9 — learning/release:** recomputed recent-20 confirmed-selected priors capped at .25, deletion/disconnect, observability/cost controls, external smoke tests and deployed Hong Kong device acceptance.
 
@@ -133,3 +133,16 @@ Official Places search/details/photo/policy documentation and Maps service terms
 Verification: **91 unit/component tests and 21 isolated Firebase emulator tests passed**, including M6 provider parsing, masks, optional failures, unsupported model IDs, attribution, empty/closed filtering, replay, concurrent selection, lease, stale computation, data boundaries and access control. Typecheck, production build, functions build and browser-bundle secret scan passed. The first standalone typecheck during concurrent dev route generation saw stale generated /terms types; the subsequent clean production build regenerated them and the standalone typecheck passed. No browser acceptance was performed; [M6 frontend scenarios and expected results](M6_FRONTEND_TESTS.md) are for the user.
 
 Live blockers: no actual server Places key/project activation or applicable content-use approval is configured; real Google coverage/photos/attribution/Maps destination and billing remain smoke-test gates. HF endpoint/recipe/revision gates from M5 still apply. No fake credentials, live restaurant claims, paid resources or region changes. M7 history is next; M8 outcomes remain separate.
+
+
+## M7 — immutable history and flip cards
+
+Implemented authenticated newest-first selected-session history, 20 records per page, stable timestamp/document-ID ordering and canonical ownership-scoped cursor recovery. Repeated selections remain separate records. No whole-history listener, aggregation, rescore or template lookup rewrites the saved trail.
+
+Cards show the selection date in Hong Kong time, meal, area, selected identity and distinct read-only outcome status. Explicit keyboard-accessible flip controls reveal exact persisted wording/options/answers, neutral and unanswered states, original context summary, shortlist IDs/order, recommendation/selection, provider/revision/fallback, stop reason and recorded confidence type. Reduced-motion mode removes the brief face transition. Pending selection is never presented as a confirmed visit.
+
+Current restaurant details are fetched separately and only for the selected ID as the card enters view. Live metadata/photo attribution uses M6's guards; synthetic content is labeled. Missing/closed/changed details cannot hide or mutate the original question trail. Expired licensed context is redacted in a read projection, without rewriting the stored app-owned trail. No history display data is written to browser storage or Firestore.
+
+Verification: **94 unit/component tests and 26 isolated emulator tests passed**. M7 checks cover 20+5 pagination, equal timestamps, nanosecond cursor precision, newer inserts, repeated place IDs, excluded unfinished sessions, invalid/deleted/foreign anchors, authorization, strict query parameters, no-store responses, selected-only detail fetches, provider failure and unchanged snapshots. Production build, standalone typecheck and client secret scan passed. Initial typechecking during dev route generation encountered stale generated route types; the production build regenerated them successfully. Frontend/browser acceptance remains user-run via [M7 scenarios and expected results](M7_FRONTEND_TESTS.md).
+
+No preview history was seeded or cleared by the tests. Live provider credentials/content approval, actual Google data/attribution checks and deployed index verification remain external gates. App Hosting Taiwan and Firestore Hong Kong are unchanged. **M8 next:** delayed next-opening confirmation, snooze, actual-other selection and outcome corrections.

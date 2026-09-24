@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { currentLaunchId } from "@/lib/client/launch";
 import { RestaurantResults } from "./RestaurantResults";
@@ -379,6 +380,11 @@ function AuthenticatedDecision({ uid }: { uid: string }) {
             }}
             skipAuto={!!error}
           />
+          {session.status === "SELECTED" && (
+            <p>
+              <Link href="/history">睇返已選擇記錄 →</Link>
+            </p>
+          )}
           <h2>{text.trail}</h2>
           <ol>
             {session.answers.map((a) => {
