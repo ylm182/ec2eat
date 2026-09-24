@@ -24,10 +24,14 @@ export default function Home() {
       </div>
       <section className="decision-entry">
         <p className="eyebrow">{copy.private}</p>
-        <button className="primary" disabled aria-describedby="foundation-note">
-          {copy.decide}
+        <Link
+          className="primary"
+          href="/demo"
+          aria-describedby="foundation-note"
+        >
+          {copy.demoEntry}
           <span aria-hidden>→</span>
-        </button>
+        </Link>
         <p id="foundation-note" className="hint">
           {copy.foundation} · {copy.foundationDetail}
         </p>

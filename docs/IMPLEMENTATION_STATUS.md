@@ -15,8 +15,8 @@ Session transitions and delayed outcome rules are compatible. `GET /api/profile`
 ## Milestone plan
 
 1. **M1 — foundation (implemented, locally verified):** Next.js/TypeScript shell, private authentication, domain schemas, UID-scoped server reads, provider contracts, rules/indexes, local setup and CI.
-2. **M2 — swipe UI (next):** `DecisionSwipeCard` using the pinned `react-tinder-card`; left/right/up, inert down, threshold feedback, common guarded tap/keyboard path, retry with stable request ID, reduced motion and mobile touch/scroll checks. Use clearly labeled synthetic fixtures.
-3. **M3 — adaptive engine:** all 22 templates/11 dimensions, app-authored archetypes, deterministic scoring, known/neutral distinction, variance questions, categorical exception, stop-by-six and server session orchestration with transactions/idempotency. Complete the mocked vertical slice.
+2. **M2 — swipe UI (implemented, locally verified):** `DecisionSwipeCard` using the pinned `react-tinder-card`; left/right/up, inert down, threshold feedback, common guarded tap/keyboard path, retry with stable request ID, reduced motion and mobile touch/scroll checks. Use clearly labeled synthetic fixtures.
+3. **M3 — adaptive engine (next):** all 22 templates/11 dimensions, app-authored archetypes, deterministic scoring, known/neutral distinction, variance questions, categorical exception, stop-by-six and server session orchestration with transactions/idempotency. Complete the mocked vertical slice.
 4. **M4 — context:** explicit location or manual district, independent Calendar/Weather failure handling and validated Gemini extraction with fixed-template fallback.
 5. **M5 — Laya:** real HF recipe fixture and pinned revision, bounded scoring fallback, lease/circuit behavior, app-open warm-up and authenticated 11:00/17:00 HKT scheduled function.
 6. **M6 — restaurants:** real Places shortlist only, content policy/attribution, idempotent explicit selection, Maps after persistence, honest empty/error states.
@@ -48,3 +48,26 @@ Session transitions and delayed outcome rules are compatible. `GET /api/profile`
 ## Remaining real integration/release gates
 
 No live project configuration, UID allowlist, OAuth consent/KMS setup, Google API credentials/entitlement, or HF protected endpoint/revision was supplied. These block their live checks, not M2/M3. Backend provisioning must verify Next adapter support and both selected regions. Google content-use permissions must be checked before enrichment or persistent content is enabled. Resolve/review remaining dependency advisories before release. Production device tests, real selection/confirmation/history flow, scheduled warm-up and real Laya-down fallback are still outstanding.
+
+
+## M2 implementation and verification · 24 September 2026
+
+`DecisionSwipeCard` now wraps the actual pinned `react-tinder-card` package. The ordinary Next.js client component import builds and hydrates without observed errors, so no SSR workaround or gesture-engine substitution was needed. Callback identities and the down-prevention array remain stable during feedback renders, avoiding the library's listener resets mid-drag.
+
+Left/right send the displayed option IDs; up sends `neutral` without an option ID or numeric value. Down is prevented and ignored defensively. A synchronous per-instance lock covers swipe, tap and arrow keys; buttons are outside the draggable surface. Each question gets its own component key, focus target and operation ID. Late completion after unmount is ignored and its request signal aborted. Success navigation is separate from persistence.
+
+Defaults: position threshold = 22% of surface width, clamped to 64–120 px; a save attempt has a 10-second recovery deadline. Failure remounts the same question at its origin, preserves the selected answer as unconfirmed, disables answer changes and focuses Retry. Retrying reuses the same request ID, expected revision and body. A response lost after a commit is simulated by the demo store and replayed without a second record. These are frontend/mock guarantees; server transaction/idempotency verification still belongs to M3.
+
+Reduced motion is read from the media query and suppresses library transforms via CSS, including during drag; directional highlights, swipes, buttons and keys remain usable. No global animation setting is changed. Touch handling is confined to the card. Arrow handling is scoped to its focused region; down, keys outside the region, modified keys and held/repeated keys do not submit.
+
+`/demo` is visibly marked as a synthetic, non-adaptive three-question preview. It makes no provider/API calls, requires no credentials, and retains answers only until the page is reloaded or left. The retry simulator lives in a collapsed demo-only section. It does not recommend restaurants, write History or infer visits. The normal `1 / ~6` presentation is shown alongside an explicit three-fixture explanation. The authenticated application data routes and allowlist are unchanged.
+
+Verification completed:
+
+- Typecheck and production build passed with the real swipe dependency. Client-secret scan passed.
+- 40 unit/component tests passed: 18 original foundation tests, 18 real-library component tests, 4 synthetic transport tests. Tests cover all directions, threshold feedback during drag, inert down/below-threshold movement, touch event path, buttons, arrow keys, concurrent input, Strict Mode, unchanged retry payload, late completion, timeout, cancellation and reduced-motion input.
+- Browser QA at 390×844 and 320×740: left/right/up gestures work; down remains on the current question; buttons and keyboard advance correctly; lost-response retry preserves neutral and advances once. A completed trail contained exactly three answers in order.
+- At 320 px, page width was 320 px (no horizontal overflow); scrolling outside the card moved the page. Browser error log was empty, including hydration. Temporary viewport overrides were reset after testing.
+- Browser gestures were mouse-driven at mobile dimensions; touch events and reduced-motion media were exercised in component tests. A physical mobile-device touch smoke test remains a release check; do not describe this as device-lab coverage.
+
+No new live integration blocker was introduced. Existing deployment/provider/audit gates remain as documented above. M3 will replace fixed question ordering with the adaptive catalog and deterministic engine and connect authoritative session writes.

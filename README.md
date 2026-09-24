@@ -2,7 +2,7 @@
 
 Private Hong Kong restaurant decision app. Behavior is governed by [EC2EAT_IMPLEMENTATION_SPEC.md](EC2EAT_IMPLEMENTATION_SPEC.md); technical contracts by [EC2EAT_ARCHITECTURE.md](EC2EAT_ARCHITECTURE.md).
 
-**Current scope: M1 foundation.** Home/history/privacy shells, Firebase Google sign-in, server allowlist, isolated read repositories, runtime domain schemas, provider interfaces, emulator rules/indexes and verification. The decision button is explicitly unavailable until M2/M3. No restaurants, visits or AI responses are represented as live data. No cloud resources have been created.
+**Current scope: M1 foundation and M2 swipe UI.** Home/history/privacy shells, Firebase Google sign-in, server allowlist, isolated read repositories, runtime domain schemas, provider interfaces, emulator rules/indexes and verification. The home page links to an explicitly labeled `/demo` with three fixed fixture questions. It supports left/right/up swipes, matching buttons/arrow keys, reduced motion and a simulated lost-response retry. Answers stay in page memory; adaptive decisions and server persistence follow in M3. No restaurants, visits or AI responses are represented as live data. No cloud resources have been created.
 
 ## Local setup
 
@@ -36,11 +36,12 @@ npm run check:client
 
 The last build uses a synthetic secret marker to check that server environment values do not appear in `.next/static`. All privileged server modules import `server-only`. This is a focused boundary check, not a promise to detect every conceivable secret.
 
-CI performs these checks with Java 21 and no paid API credentials. Unit tests use explicit dependency injection; emulator tests use actual Auth/Firestore emulators, Firebase token verification and deny-all client rules. Full external integration and mobile swipe tests belong to later milestones.
+CI performs these checks with Java 21 and no paid API credentials. Unit tests use explicit dependency injection; emulator tests use actual Auth/Firestore emulators, Firebase token verification and deny-all client rules. M2 adds real-library component tests (mouse/touch gestures, buttons, keys, duplicate protection, retry, cancellation and reduced motion). Mobile-width browser verification is recorded in the status notes. Real-device touch testing and full external integration remain release checks.
 
 ## Structure
 
-- `app/`, `components/`: mobile-first Traditional Chinese shell and Google login UI.
+- `app/`, `components/`: mobile-first Traditional Chinese shell, Google login UI, `DecisionSwipeCard` and fixture demo.
+- `lib/fixtures/`: synthetic questions and an in-memory idempotent demo transport; no production authentication or data access.
 - `lib/domain/`: versioned session, question, preference, answer and outcome validation; transition guard.
 - `lib/server/`: verified Google identity + enabled UID allowlist, origin/body validation, private API envelopes, UTC/Firestore conversion and UID-scoped repository.
 - `lib/providers/`: asynchronous abortable provider contracts, fixed-wording fallback and explicit unavailable Places adapter. Laya scoring and Gemini/Google live adapters are not implemented yet.
