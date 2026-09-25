@@ -54,12 +54,12 @@ export class LayaService {
     private unavailable = "laya_not_configured",
     private random = Math.random,
   ) {}
-  async rank(input: DecisionInput): Promise<DecisionResult> {
+  async rank(input: DecisionInput, parent?: AbortSignal): Promise<DecisionResult> {
     const start = performance.now();
     let reason = this.unavailable;
     if (this.provider) {
       try {
-        const result = await deadline(1750, async (signal) => {
+        const result = await deadline(input.stage === "restaurant" ? 3000 : 1750, async (signal) => {
           if (await this.store.circuitOpen(Date.now()))
             throw new LayaFailure("laya_circuit_open");
           signal.throwIfAborted();
@@ -81,7 +81,7 @@ export class LayaService {
               signal.throwIfAborted();
             }
           throw new LayaFailure("laya_failed");
-        });
+        }, parent);
         await deadline(150, () => this.store.record(true, Date.now())).catch(
           () => {},
         );
@@ -95,6 +95,7 @@ export class LayaService {
           );
       }
     }
+    parent?.throwIfAborted();
     const fallback = await new HeuristicDecisionProvider().rank(
       input,
       new AbortController().signal,

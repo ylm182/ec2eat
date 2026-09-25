@@ -68,7 +68,7 @@ export function RestaurantResults({
     setDetailsLoading(true);
     try {
     const data = z
-      .object({ cards: z.array(restaurantCardSchema).max(3) })
+      .object({ cards: z.array(restaurantCardSchema).max(10) })
       .parse(
         await authorizedJson(uid, path + "/restaurants", undefined, signal),
       );

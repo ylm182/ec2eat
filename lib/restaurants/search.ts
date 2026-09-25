@@ -1,6 +1,6 @@
 import { restaurantEvidence } from "./evidence";
 import { bounded } from "../providers/google-context";
-import { validateRanking } from "../laya/provider";
+import { rankRestaurantPool, type RestaurantRanker } from "./ranking";
 import { rankCandidates, categoryPreference } from "../domain/engine";
 import { archetypes } from "../domain/catalog";
 import { unknownPreferences, type DecisionSession } from "../domain/schema";
@@ -26,6 +26,7 @@ export function eligible(
   places: SearchPlace[],
   centre: Coordinates,
   radius: number,
+  preserveOrder = false,
 ) {
   return [...new Map(places.map((p) => [p.placeId, p])).values()]
     .filter(
@@ -36,10 +37,10 @@ export function eligible(
     )
     .sort(
       (a, b) =>
-        distanceM(centre, a.location!) - distanceM(centre, b.location!) ||
+        preserveOrder ? 0 : distanceM(centre, a.location!) - distanceM(centre, b.location!) ||
         a.placeId.localeCompare(b.placeId),
     )
-    .slice(0, 10);
+    .slice(0, 50);
 }
 const prices: Record<string, number> = {
   PRICE_LEVEL_FREE: 0,
@@ -53,7 +54,7 @@ export async function searchRestaurants(
   centre: Coordinates,
   radius: number,
   provider: RestaurantProvider,
-  rank: (input: DecisionInput) => Promise<DecisionResult>,
+  rank: RestaurantRanker,
   signal: AbortSignal,
 ) {
   const top = rankCandidates(
@@ -61,22 +62,22 @@ export async function searchRestaurants(
   ).slice(0, 2);
   // Queries reflect preferences even in dense areas. Query results are retrieval
   // evidence only: never turn the searched-for dish into a restaurant attribute.
-  const queries = [...new Set(top.map(c => archetypes.find(a => a.id === c.id)!.label + " 餐廳"))];
+  const queries = [...new Set([...top.map(c => archetypes.find(a => a.id === c.id)!.label + " 餐廳"), "中菜 餐廳", "日本料理 餐廳", "韓國料理 餐廳", "泰國料理 餐廳"])];
   const batches = await Promise.allSettled([
     bounded(4000, s => provider.nearby(centre, radius, s), signal),
     ...queries.map(q => bounded(2500, s => provider.text(q, centre, radius, s), signal)),
   ]);
   signal.throwIfAborted();
-  const pools = batches.map(b => b.status === "fulfilled" ? eligible(b.value, centre, radius) : []);
-  // Interleave targeted pools and nearby results so ten close generic results
+  const pools = batches.map(b => b.status === "fulfilled" ? eligible(b.value, centre, radius, true) : []);
+  // Interleave targeted pools and nearby results so close generic results
   // cannot crowd every preference-matched retrieval out of the scoring set.
   const orderedPools = [...pools.slice(1), pools[0]];
   const candidates: SearchPlace[] = [];
   const seen = new Set<string>();
-  for (let i = 0; i < 10 && candidates.length < 10; i++) {
+  for (let i = 0; i < 20 && candidates.length < 50; i++) {
     for (const pool of orderedPools) {
       const place = pool[i];
-      if (place && !seen.has(place.placeId) && candidates.length < 10) {
+      if (place && !seen.has(place.placeId) && candidates.length < 50) {
         candidates.push(place); seen.add(place.placeId);
       }
     }
@@ -119,27 +120,17 @@ export async function searchRestaurants(
   // No Google-derived features go to HF unless separately approved. No invented cuisine/taste tags.
   let result: DecisionResult;
   if (provider.modelInputAllowed && candidates.length) {
-    try {
-      result = await rank(input);
-      validateRanking(
-        { entries: result.entries, confidence: result.confidence },
-        input,
-      );
-    } catch {
-      result = {
-        ...(await new HeuristicDecisionProvider().rank(input, signal)),
-        fallbackReason: "laya_invalid_output",
-      };
-    }
+    result = await rankRestaurantPool(input, rank, signal);
   } else
     result = {
       ...(await new HeuristicDecisionProvider().rank(input, signal)),
       fallbackReason: "places_model_input_not_approved",
     };
-  const shortlist = result.entries.slice(0, 3);
+  const shortlist = result.entries.slice(0, 10);
   const sum = shortlist.reduce((n, c) => n + c.weight, 0);
   return {
     result,
+    poolSize: candidates.length,
     candidates: shortlist.map((c) => ({
       placeId: c.id,
       score: c.score,

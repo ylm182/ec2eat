@@ -144,3 +144,8 @@ Start M1, with fixtures and emulators, then advance in milestone order. Keep dep
 ### Copyable handoff prompt
 
 > Implement the personal Hong Kong restaurant decision app **ec2eat** using `EC2EAT_IMPLEMENTATION_SPEC.md` and `EC2EAT_ARCHITECTURE.md` as the source of truth. Read both, perform a concise consistency review, state the milestone plan, and begin M1. Use `react-tinder-card` for question swipes. Preserve left/right/up semantics, binary-first adaptive questions, flip-card history and next-opening visit confirmation. Use Gemini `gemini-3.5-flash-lite` for context/language, Hugging Face Laya for scoring, and a deterministic fallback. Keep Firebase App Hosting in Taiwan and Firestore in Hong Kong. Use mocks/emulators until integrations are configured; never invent live data or credentials. Implement and verify each milestone incrementally, documenting defaults and real blockers without expanding the product scope.
+
+
+## Owner-approved restaurant-ranking update — 25 September 2026
+
+The accepted larger-pool flow supersedes the earlier restaurant-only candidate/result and call-count limits: up to 50 unique in-radius candidates from popular nearby and bounded food/cuisine searches, at most six Laya tournament passes of ten or fewer candidates, and up to ten displayed recommendations. Weights from different batches are never compared. Any failed pass uses deterministic ranking over the whole pool. Restaurant ranking has a 20-second budget within 25-second retrieval/ranking; question inference and three-to-six adaptive answers are unchanged. See [TOP_TEN_RANKING.md](docs/TOP_TEN_RANKING.md) for defaults, cost, approximation limits and verification.

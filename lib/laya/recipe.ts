@@ -33,7 +33,7 @@ export function encodeLaya(input: DecisionInput) {
   const state = [
     "Match explicit preferences first. Values 0..1; 1 means:",
     active.map(d => `${d}=${high[d]}`).join(","),
-    "Missing=?; neutral=no preference, never fill from priors. Candidate rows use the dimension order above; each value@confidence.",
+    "Cuisine is descriptive only; do not infer taste, speed or health from cuisine. Missing=?; neutral=no preference, never fill from priors. Candidate rows use the dimension order above; each value@confidence.",
     ...active.map(d => {
       const current = input.preferences[d];
       const p = current.state === "unknown" ? input.priors[d]! : current;
@@ -49,6 +49,7 @@ export function encodeLaya(input: DecisionInput) {
   return {path: "/", body: {inputs: {state, candidates: input.candidates.map(c => ({
     id: c.id,
     description: [
+      ...(c.cuisines?.length ? [`cuisine=${c.cuisines.join("/")}`] : []),
       ...(c.categoryId ? [`category=${c.categoryId}`] : []),
       ...active.map(d => {
         const f = c.features[d];

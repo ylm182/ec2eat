@@ -118,7 +118,7 @@ export class GooglePlacesProvider implements RestaurantProvider {
       {
         includedTypes: ["restaurant"],
         maxResultCount: 20,
-        rankPreference: "DISTANCE",
+        rankPreference: "POPULARITY",
         languageCode: "zh-TW",
         locationRestriction: { circle: { center: location, radius: radiusM } },
       },

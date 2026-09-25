@@ -622,6 +622,19 @@ describe("M6 restaurant transactions", () => {
       repo: restaurantRepository(db, user, () => provider),
     };
   }
+  it("persists ten recommendations and permits selecting the tenth", async () => {
+    const {session,provider,repo}=await setup("ten-restaurants","results",3000);
+    const original=provider.nearby;
+    provider.nearby=async(c,r,s)=>{const base=(await original(c,r,s))[0]; return Array.from({length:20},(_,i)=>({...base,placeId:`many-${i}`}));};
+    provider.text=async()=>[];
+    const ready=await repo.recommend(session.id,{requestId:"ten",expectedRevision:session.revision,reason:"user_requested"});
+    expect(ready.decision.candidates).toHaveLength(10);
+    expect((await repo.cards(session.id)).cards).toHaveLength(10);
+    const chosen=await repo.select(session.id,{requestId:"tenth",expectedRevision:ready.revision,placeId:ready.decision.candidates[9].placeId,launchId:"later-opening"});
+    expect(chosen.decision.selectedPlaceId).toBe(ready.decision.candidates[9].placeId);
+    expect(chosen.outcome.status).toBe("PENDING");
+    expect((await repo.cards(session.id,true)).cards).toHaveLength(1);
+  });
   it("uses the explicitly chosen radius and does not expand beyond 10 km", async () => {
     for (const radius of [3000, 10000] as const) {
       const { session, provider, repo } = await setup(`radius-${radius}`, "closed", radius);

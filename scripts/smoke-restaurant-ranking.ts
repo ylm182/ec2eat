@@ -21,17 +21,14 @@ async function main() {
   const service = new LayaService(hf,{circuitOpen:async()=>false,record:async()=>{},acquire:async()=>true,release:async()=>{}});
   const session = newSession({id:"smoke",uid:"synthetic-smoke-user",launchId:"smoke",area:"中環",now:new Date().toISOString(),preferences});
   const google = new GooglePlacesProvider(secret("GOOGLE_PLACES_API_KEY","2"),true);
-  let inputCount = 0; let categoryCount = 0;
-  const result = await searchRestaurants(session,{latitude:22.2819,longitude:114.1589},3000,google,async input => {
-    inputCount=input.candidates.length; categoryCount=input.candidates.filter(c=>c.categoryId).length;
-    const scored = await service.rank(input);
-    if(scored.provider !== "laya") {
-      const contract = await hf.rank(input,AbortSignal.timeout(15000));
-      console.log(JSON.stringify({case:"live-contract-outside-app-budget",provider:contract.provider,count:contract.entries.length,latencyMs:contract.latencyMs}));
-    }
+  const seen = new Set<string>(); const categorized = new Set<string>(); let rankCalls=0;
+  const result = await searchRestaurants(session,{latitude:22.2819,longitude:114.1589},3000,google,async (input, signal) => {
+    rankCalls++; input.candidates.forEach(c=>{seen.add(c.id);if(c.categoryId)categorized.add(c.id);});
+    const scored = await service.rank(input, signal);
+    console.log(JSON.stringify({case:"ranking-pass",pass:rankCalls,count:input.candidates.length,provider:scored.provider,fallbackReason:scored.fallbackReason,latencyMs:scored.latencyMs}));
     return scored;
-  },AbortSignal.timeout(25000));
-  console.log(JSON.stringify({case:"google-to-laya",candidateCount:inputCount,categoryCount,shortlistCount:result.candidates.length,provider:result.result.provider,fallbackReason:result.result.fallbackReason,latencyMs:result.result.latencyMs}));
-  if(!inputCount) throw Error("No eligible live candidates; ranking unverified");
+  },AbortSignal.timeout(30000));
+  console.log(JSON.stringify({case:"google-to-laya",poolSize:result.poolSize,candidateCount:seen.size,categoryCount:categorized.size,rankCalls,shortlistCount:result.candidates.length,provider:result.result.provider,fallbackReason:result.result.fallbackReason,latencyMs:result.result.latencyMs}));
+  if(!seen.size) throw Error("No eligible live candidates; ranking unverified");
 }
 main().catch(() => { console.error("Live ranking smoke failed (provider payloads omitted)"); process.exitCode=1; });

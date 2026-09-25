@@ -14,6 +14,7 @@ export type DecisionInput = {
   candidates: {
     id: string;
     categoryId?: string;
+    cuisines?: string[];
     distanceM?: number;
     features: Partial<Record<Dimension, Feature>>;
   }[];

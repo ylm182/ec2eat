@@ -255,3 +255,8 @@ Critical test cases: reversed speed/healthiness polarity; neutral vs unknown; si
 Structured logs: request/session IDs, route duration, provider/model revision, timeout/error category, fallback, question count, stop reason, API field-mask category and token/count estimates. Use pseudonymous user references. Exclude raw inputs. Track p50/p95 decision latency, fallback rate, Places failures, confirmed outcomes, HF warm-up success/latency and estimated spend. Alert on repeated auth/configuration failures, repeated scheduled warm-up failures or sustained required-provider outages; do not alert for every expected scale-to-zero fallback.
 
 MVP release requires real external smoke tests, not only fixture success. Unverified account access, recipe routes, regional availability or content-use permissions are explicit deployment checks; they do not justify redesigning the product or claiming an integration is complete.
+
+
+## Owner-approved restaurant-ranking update — 25 September 2026
+
+The accepted larger-pool flow supersedes the earlier restaurant-only candidate/result and call-count limits: up to 50 unique in-radius candidates from popular nearby and bounded food/cuisine searches, at most six Laya tournament passes of ten or fewer candidates, and up to ten displayed recommendations. Weights from different batches are never compared. Any failed pass uses deterministic ranking over the whole pool. Restaurant ranking has a 20-second budget within 25-second retrieval/ranking; question inference and three-to-six adaptive answers are unchanged. See [TOP_TEN_RANKING.md](docs/TOP_TEN_RANKING.md) for defaults, cost, approximation limits and verification.

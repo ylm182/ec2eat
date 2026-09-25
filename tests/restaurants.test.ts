@@ -60,7 +60,7 @@ describe("restaurant search and content boundaries", () => {
       1,
     );
   });
-  it("limits text queries to two and does not fabricate results for an empty search", async () => {
+  it("limits text queries to six and does not fabricate results for an empty search", async () => {
     const p = syntheticPlaces("empty");
     const text = vi.spyOn(p, "text");
     const result = await searchRestaurants(
@@ -71,7 +71,7 @@ describe("restaurant search and content boundaries", () => {
       vi.fn(),
       signal(),
     );
-    expect(text).toHaveBeenCalledTimes(2);
+    expect(text).toHaveBeenCalledTimes(6);
     expect(result.candidates).toEqual([]);
   });
   it("uses only evidence-backed distance and price when model use is approved", async () => {
@@ -114,6 +114,7 @@ describe("restaurant search and content boundaries", () => {
       /photos|reviews|displayName/,
     );
     expect(JSON.parse(init.body as string).maxResultCount).toBe(20);
+    expect(JSON.parse(init.body as string).rankPreference).toBe("POPULARITY");
   });
   it("keeps live detail attribution and unknowns; photo failure cannot erase the restaurant", async () => {
     const transport = vi.fn(
@@ -201,7 +202,7 @@ it("invalid model IDs cannot enter the shortlist and supplemental failure preser
   );
   expect(result.candidates.map((c) => c.placeId)).toEqual(["synthetic-0"]);
   expect(result.result.provider).toBe("heuristic");
-  expect(result.result.fallbackReason).toBe("laya_invalid_output");
+  expect(result.result.fallbackReason).toBe("laya_tournament_fallback");
 });
 
 it("photo media is displayed only with a safe URL and its supplied author attribution", async () => {
@@ -249,7 +250,7 @@ it("photo media is displayed only with a safe URL and its supplied author attrib
  });
 
 
-it("keeps targeted candidates in a dense nearby set and caps the inference batch at ten", async () => {
+it("keeps targeted candidates in a dense nearby set and caps the candidate pool at fifty", async () => {
   const p = syntheticPlaces("results"); p.modelInputAllowed = true;
   const base = (await p.nearby(centre, 3000, signal()))[0];
   p.nearby = async () => Array.from({length:20}, (_, i) => ({...base, placeId:`near-${i}`, location:centre}));
@@ -259,20 +260,21 @@ it("keeps targeted candidates in a dense nearby set and caps the inference batch
     return Array.from({length:8}, (_, i) => ({...base, placeId:`target-${queries.length}-${i}`,
       location:{latitude:22.29,longitude:114.16}, primaryType:"ramen_restaurant"}));
   };
-  const rank = vi.fn(async input => new HeuristicDecisionProvider().rank(input, signal()));
+  const rank = vi.fn(async input => ({...await new HeuristicDecisionProvider().rank(input, signal()),provider:"laya" as const}));
   await searchRestaurants(sessionFixture(), centre, 3000, p, rank, signal());
-  expect(queries).toHaveLength(2);
+  expect(queries).toHaveLength(6);
   const candidates = rank.mock.calls[0][0].candidates;
   expect(candidates).toHaveLength(10);
+  expect(new Set(rank.mock.calls.slice(0,5).flatMap(call=>call[0].candidates.map((c:{id:string})=>c.id))).size).toBe(50);
   expect(new Set(candidates.map((c: {id:string}) => c.id)).size).toBe(10);
   expect(candidates.some((c: {id:string}) => c.id.startsWith("target-"))).toBe(true);
-  expect(candidates.some((c: {id:string}) => c.id.startsWith("near-"))).toBe(true);
+  expect(rank.mock.calls.flatMap(call => call[0].candidates).some((c: {id:string}) => c.id.startsWith("near-"))).toBe(true);
   expect(candidates[0].categoryId).toBe("noodles");
 });
 it("provider types map narrowly and never inherit archetype taste attributes", () => {
   const base = {placeId:"test",location:centre,businessStatus:null,openNow:null,priceLevel:null};
-  expect(restaurantEvidence({...base,types:["japanese_restaurant"]})).toEqual({features:{}});
-  expect(restaurantEvidence({...base,types:["ramen_restaurant","salad_shop"]})).toEqual({features:{}});
+  expect(restaurantEvidence({...base,types:["japanese_restaurant"]})).toEqual({features:{},cuisines:["Japanese"]});
+  expect(restaurantEvidence({...base,types:["ramen_restaurant","salad_shop"]})).toEqual({features:{},cuisines:[]});
   expect(restaurantEvidence({...base,primaryType:"salad_shop",types:["restaurant"]}).categoryId).toBe("salad");
   const evidence = restaurantEvidence({...base,types:["fine_dining_restaurant","ramen_restaurant"]});
   expect(evidence.categoryId).toBe("noodles");
@@ -294,7 +296,7 @@ it("asks preference-driven searches even when nearby succeeds and tolerates thei
   const p = syntheticPlaces("results");
   const text = vi.spyOn(p,"text").mockRejectedValue(new Error("unavailable"));
   const result = await searchRestaurants(sessionFixture(),centre,3000,p,vi.fn(),signal());
-  expect(text).toHaveBeenCalledTimes(2);
+  expect(text).toHaveBeenCalledTimes(6);
   expect(result.candidates).toHaveLength(3);
 });
 

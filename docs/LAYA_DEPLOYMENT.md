@@ -90,3 +90,7 @@ support case is drafted in [GOOGLE_MAPS_RANKING_SUPPORT.md](GOOGLE_MAPS_RANKING_
 and has not been sent. Existing deterministic reordering is included in the clarification.
 
 Superseded by owner permission confirmation and [restaurant activation](RESTAURANT_RANKING_ACTIVATION.md).
+
+## Larger restaurant pool
+
+See [TOP_TEN_RANKING.md](TOP_TEN_RANKING.md): up to fifty candidates, six tournament passes, ten results; restaurant-stage deadline is now three seconds per pass. Archetype question timing remains unchanged.

@@ -162,13 +162,13 @@ export function restaurantRepository(
             ? 5000
             : 10000
           : (stopped.search?.radiusM ?? base);
-        const found = await bounded(10000, (signal) =>
+        const found = await bounded(25000, (signal) =>
           searchRestaurants(
             stopped,
             centre.location,
             radius,
             p,
-            (i) => layaService(db).rank(i),
+            (i, s) => layaService(db).rank(i, s),
             signal,
           ),
         );
@@ -250,7 +250,7 @@ export function restaurantRepository(
           .filter(
             (c) => !selectedOnly || c.placeId === s.decision.selectedPlaceId,
           )
-          .slice(0, selectedOnly ? 1 : 3)
+          .slice(0, selectedOnly ? 1 : 10)
           .map(async (c) => {
             try {
               return await bounded(5000, (signal) =>

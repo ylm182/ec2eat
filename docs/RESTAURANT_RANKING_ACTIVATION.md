@@ -1,5 +1,7 @@
 # Restaurant ranking activation — 25 September 2026
 
+The initial ten-candidate/three-result flow below is superseded by [TOP_TEN_RANKING.md](TOP_TEN_RANKING.md). Permission confirmation remains applicable.
+
 Permission blocker closed on the owner's explicit confirmation: “Permission remains is granted, please close the first blocker.” This is owner-attested approval, not an independently obtained Google support response. The earlier review and unsent support draft are retained as historical records. No further permission request is required for this change.
 
 ## Implemented behavior
