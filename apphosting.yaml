@@ -11,7 +11,7 @@ env:
     value: live
     availability: [ RUNTIME ]
   - variable: APP_ORIGIN
-    value: https://ec2eat--ec2eat-davidyu-prod.asia-east1.hosted.app
+    value: https://ec2eat.fun
     availability: [ RUNTIME ]
   - variable: GOOGLE_CLOUD_PROJECT
     value: ec2eat-davidyu-prod
