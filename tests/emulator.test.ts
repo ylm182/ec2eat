@@ -600,7 +600,7 @@ describe("M5 shared scoring and warm-up coordination", () => {
 });
 
 describe("M6 restaurant transactions", () => {
-  async function setup(label: string, mode = "results") {
+  async function setup(label: string, mode = "results", searchRadiusM?: 3000 | 10000) {
     const { restaurantRepository } = await import("../lib/server/restaurants");
     const { syntheticPlaces } = await import("../lib/server/places");
     const identity = await googleToken(label);
@@ -611,6 +611,7 @@ describe("M6 restaurant transactions", () => {
       requestId: "create",
       launchId: "opening",
       area: "中環",
+      ...(searchRadiusM ? { searchRadiusM } : {}),
     });
     const provider = syntheticPlaces(mode);
     return {
@@ -621,6 +622,26 @@ describe("M6 restaurant transactions", () => {
       repo: restaurantRepository(db, user, () => provider),
     };
   }
+  it("uses the explicitly chosen radius and does not expand beyond 10 km", async () => {
+    for (const radius of [3000, 10000] as const) {
+      const { session, provider, repo } = await setup(`radius-${radius}`, "closed", radius);
+      const observed: number[] = [];
+      const nearby = provider.nearby;
+      provider.nearby = async (coords, actualRadius, signal) => {
+        observed.push(actualRadius);
+        return nearby(coords, actualRadius, signal);
+      };
+      const result = await repo.recommend(session.id, {
+        requestId: "radius-search", expectedRevision: session.revision, reason: "user_requested",
+      });
+      expect(result.context.searchRadiusM).toBe(radius);
+      expect(result.search?.radiusM).toBe(radius);
+      expect(observed).toEqual([radius]);
+      if (radius === 10000) await expect(repo.recommend(session.id, {
+        requestId: "too-wide", expectedRevision: result.revision, reason: "automatic", expandArea: true,
+      })).rejects.toMatchObject({ code: "INVALID_EXPANSION" });
+    }
+  });
   it("persists only IDs and app metadata; explicit selection is idempotent and never a visit", async () => {
     const { db, user, session, provider, repo } =
       await setup("restaurants-select");

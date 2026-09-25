@@ -1,4 +1,5 @@
 "use client";
+import { Loading } from "./Loading";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Account } from "./Account";
@@ -23,6 +24,7 @@ export function HistoryFlow() {
   );
 }
 function HistoryList({ uid }: { uid: string }) {
+  const [index, setIndex] = useState(0);
   const [sessions, setSessions] = useState<DecisionSession[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false),
@@ -67,6 +69,7 @@ function HistoryList({ uid }: { uid: string }) {
               ),
             ],
       );
+      if (reset) setIndex(0);
       setCursor(page.nextCursor);
       setLoaded(true);
       setResetRequired(false);
@@ -101,15 +104,16 @@ function HistoryList({ uid }: { uid: string }) {
         重新載入最新記錄
       </button>
       {error && <p role="alert">{error}</p>}
-      {busy && <p role="status">載入歷史中…</p>}
+      {busy && <Loading label="載入記錄" />}
       {loaded && !sessions.length && (
         <div className="empty">
           <h2>未有已選擇記錄</h2>
           <p>明確揀咗餐廳之後，記錄就會喺呢度出現。未完成嘅問題唔會列入。</p>
         </div>
       )}
+      {sessions.length > 1 && <nav className="card-pager" aria-label="記錄分頁"><button disabled={index === 0} onClick={() => setIndex(index - 1)}>←</button><span>{index + 1} / {sessions.length}</span><button disabled={index === sessions.length - 1} onClick={() => setIndex(index + 1)}>→</button></nav>}
       <div className="history-list">
-        {sessions.map((s) => (
+        {sessions.slice(index, index + 1).map((s) => (
           <HistoryCard key={s.id} uid={uid} session={s} />
         ))}
       </div>

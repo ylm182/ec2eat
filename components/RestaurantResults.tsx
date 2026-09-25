@@ -1,4 +1,5 @@
 "use client";
+import { Loading } from "./Loading";
 import { currentLaunchId } from "@/lib/client/launch";
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
@@ -28,6 +29,8 @@ export function RestaurantResults({
   onSession: (s: DecisionSession) => void;
   skipAuto?: boolean;
 }) {
+  const [index, setIndex] = useState(0);
+  const [detailsLoading, setDetailsLoading] = useState(false);
   const [cards, setCards] = useState<RestaurantCard[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -62,12 +65,16 @@ export function RestaurantResults({
     return fresh;
   }
   async function load(signal?: AbortSignal) {
+    setDetailsLoading(true);
+    try {
     const data = z
       .object({ cards: z.array(restaurantCardSchema).max(3) })
       .parse(
         await authorizedJson(uid, path + "/restaurants", undefined, signal),
       );
     setCards(data.cards);
+    setIndex(0);
+    } finally { setDetailsLoading(false); }
   }
   useEffect(() => {
     setCards([]);
@@ -166,6 +173,7 @@ export function RestaurantResults({
   const empty = session.search?.result === "empty";
   return (
     <section aria-label="餐廳選擇" className="restaurant-results">
+      {(busy || detailsLoading) && <Loading label="搵緊好嘢食" />}
       {error && <p role="alert">{error}</p>}
       {session.status === "RECOMMENDING" ? (
         <>
@@ -184,7 +192,7 @@ export function RestaurantResults({
           <button disabled={busy} onClick={() => search()}>
             重試搜尋
           </button>
-          {empty && !session.search!.expanded && !pending.current && (
+          {empty && session.search!.radiusM < 10000 && !session.search!.expanded && !pending.current && (
             <button disabled={busy} onClick={() => search(true)}>
               擴大範圍再搵
             </button>
@@ -194,16 +202,11 @@ export function RestaurantResults({
         <>
           <h2>{selected ? "已儲存你的選擇" : "揀間啱心水嘅"}</h2>
           <p>{session.decision.reason}</p>
-          <p className="hint">
-            {session.search?.centreSource === "gps"
-              ? "搜尋以今次定位為中心。"
-              : "搜尋以所選地區中心為準。"}
-            餐廳資料係目前資料；未知資料唔代表零或休息。
-          </p>
           {cards.length === 1 && <p>目前只搵到一間可用餐廳。</p>}
-          {!cards.length && <p role="status">餐廳資料載入中或暫時不可用。</p>}
+          {!cards.length && !detailsLoading && <p>暫時未有餐廳資料。</p>}
+          {cards.length > 1 && <nav className="card-pager" aria-label="餐廳分頁"><button disabled={index === 0} onClick={() => setIndex(index - 1)}>←</button><span>{index + 1} / {cards.length}</span><button disabled={index === cards.length - 1} onClick={() => setIndex(index + 1)}>→</button></nav>}
           <div className="restaurant-grid">
-            {cards.map((card, index) => (
+            {cards.slice(index, index + 1).map((card) => (
               <article className="restaurant-card" key={card.placeId}>
                 <p>
                   {card.source === "synthetic" ? "合成測試資料 · " : ""}

@@ -689,3 +689,82 @@ footer {
   cursor: pointer;
   font-weight: 600;
 }
+
+/* Mobile refresh: viewport-sized stages with contained long-content panels. */
+:root { --paper:#fff8ed; --ink:#322453; --green:#7144dc; --muted:#716580; --line:#e9def6; }
+body { background:radial-gradient(at 10% 10%,#ffdab6,transparent 55%),radial-gradient(at 90% 90%,#d5c7ff,transparent 60%),#fff8ed; }
+.shell { position:relative; width:100%; max-width:480px; height:100dvh; margin:0 auto; padding:0 20px; display:flex; flex-direction:column; overflow:hidden; background:#fffaf2; }
+header { height:64px; flex-shrink:0; border:0; padding-right:44px; }
+.brand { color:#6539c8; font-size:30px; }
+.brand-dot { color:#ff7954; }
+.header-note { font-size:10px; letter-spacing:0; }
+main { flex:1; min-height:0; padding:4px 0 8px; overflow:auto; scrollbar-width:thin; }
+footer { flex-shrink:0; padding:10px 0 max(10px,env(safe-area-inset-bottom)); border:0; }
+h1, .small-title { font-size:30px; margin:8px 0 12px; letter-spacing:-1px; }
+h1 em { display:block; color:#ed684a; }
+.home-screen { height:100%; display:flex; flex-direction:column; }
+.home-screen h1 { font-size:clamp(30px,6dvh,48px); }
+.account { padding:0; }
+.account-menu { position:absolute; right:18px; top:13px; z-index:30; }
+.account-menu > summary { list-style:none; width:40px; height:40px; display:grid; place-items:center; background:#efe5ff; color:#6539c8; border-radius:50%; cursor:pointer; font-size:24px; }
+.account-menu > summary::-webkit-details-marker { display:none; }
+.settings-panel { position:absolute; right:0; top:48px; width:min(340px,calc(100vw - 40px)); max-height:calc(100dvh - 115px); overflow:auto; background:#fffaf2; border:2px solid #d9c3ff; border-radius:24px; padding:20px; box-shadow:0 15px 60px #32245335; }
+.settings-panel h2 { font-size:20px; margin-top:0; }
+.sr-only { position:absolute!important; width:1px!important; height:1px!important; padding:0!important; margin:-1px!important; overflow:hidden!important; clip:rect(0,0,0,0)!important; white-space:nowrap!important; border:0!important; }
+.live-decision { margin:0; }
+.session-meta { text-align:center; font-size:12px; color:var(--muted); margin:4px 0; }
+.question-meta { padding:4px 8px; font-size:11px; }
+.question-meta span:first-child { visibility:hidden; }
+.direction-labels { display:none; }
+.swipe-surface { padding:12px 4px 16px; overflow:hidden; }
+.question-face { min-height:0; height:clamp(220px,49dvh,450px); padding:16px 12px; border:0; border-radius:32px; background:#eee3ff; box-shadow:0 8px 0 #d9c5f7; justify-content:space-evenly; }
+.question-face[data-direction="left"] { background:#d1f3dc; }
+.question-face[data-direction="right"] { background:#ffd9c4; }
+.question-face[data-direction="up"] { background:#ffedb1; }
+.question-art { width:100%; max-height:34dvh; flex:1; min-height:0; }
+.question-options { width:100%; gap:12px; font-size:clamp(13px,3.6vw,17px); font-weight:700; justify-content:space-around; }
+.question-options span:nth-child(2) { color:inherit; }
+.question-options span[aria-hidden] { display:none; }
+.answer-buttons { grid-template-columns:1fr .7fr 1fr; gap:8px; }
+.answer-buttons button,.entry-actions button { border:0; background:#dcf3e1; min-height:56px; border-radius:20px; padding:8px; font-weight:700; font-size:12px; }
+.answer-buttons button:nth-child(2) { background:#ffedb1; }
+.answer-buttons button:last-child,.entry-actions button:last-child { background:#ffd4c2; }
+.answer-buttons button span { font-size:22px; margin:0; }
+.answer-status { min-height:0; padding:0; }
+.entry-actions { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.entry-swipe { flex:1; min-height:0; }
+.home-screen .question-face { height:clamp(220px,46dvh,420px); }
+.text-button { font-size:12px; }
+.loading-overlay { position:absolute; inset:64px 0 38px; z-index:20; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:22px; background:#fff8edee; border-radius:24px; color:#6539c8; }
+.loading-orbit { width:100px; height:100px; border:9px solid #ebdbff; border-top-color:#ff7954; border-right-color:#7950dc; border-radius:50%; animation:food-spin 1.1s linear infinite; display:grid; place-items:center; }
+.loading-orbit span { font-size:42px; color:#ffae39; }
+@keyframes food-spin { to { transform:rotate(360deg); } }
+.restaurant-grid,.history-list { display:flex; overflow-x:auto; scroll-snap-type:x mandatory; gap:16px; margin:8px 0; padding:0 0 8px; }
+.restaurant-card,.history-card { flex:0 0 100%; scroll-snap-align:start; border:0; background:#f0e7ff; border-radius:24px; padding:16px; max-height:58dvh; overflow-y:auto; }
+.restaurant-card img,.photo-placeholder { height:140px; }
+.restaurant-card p { margin:7px 0; font-size:12px; }
+.restaurant-card h3 { margin:12px 0; }
+.restaurant-results h2 { font-size:22px; margin:12px 0; }
+.restaurant-results > .hint { font-size:11px; margin:6px 0; }
+.restaurant-results > p:not([role]) { font-size:12px; }
+.history-photo { max-height:180px; }
+.outcome-prompt { position:fixed; inset:80px max(20px,calc((100vw - 440px)/2)) 60px; z-index:40; overflow:auto; border:3px solid #af86f2; background:#fff9ef; border-radius:24px; box-shadow:0 0 0 100vmax #32245366; }
+.category-question { background:#eee3ff; padding:24px 12px; border-radius:30px; }
+.category-grid button { background:#fff6db; border:0; }
+@media(min-width:700px) { .shell { height:calc(100dvh - 32px); margin:16px auto; border-radius:32px; box-shadow:0 20px 70px #59367b22; } }
+@media(max-height:650px) { header {height:54px;} .question-face,.home-screen .question-face {height:40dvh;} .question-art {max-height:28dvh;} .home-screen h1 {font-size:28px;} .answer-buttons button {min-height:48px;} }
+@media(prefers-reduced-motion:reduce) { .loading-orbit {animation:none;} }
+.card-pager { display:flex; align-items:center; justify-content:center; gap:22px; font-size:12px; }
+.card-pager button { width:40px; height:36px; border:0; border-radius:50%; background:#ffdf84; color:var(--ink); }
+.card-pager button:disabled { opacity:.3; }
+/* Give the card remaining space rather than stacking fixed-height blocks. */
+main:has(.live-decision) { display:flex; flex-direction:column; }
+.live-decision { flex:1; min-height:0; display:flex; flex-direction:column; }
+.live-decision > .decision-card,.live-decision > .entry-swipe,.home-screen > .entry-swipe { flex:1; min-height:0; display:flex; flex-direction:column; }
+.live-decision .swipe-surface,.home-screen .swipe-surface { flex:1; min-height:120px; }
+.live-decision .tinder-question,.home-screen .tinder-question { height:100%; }
+.live-decision .question-face,.home-screen .question-face { height:100%; }
+.live-decision > .restaurant-results { flex:1; min-height:0; display:flex; flex-direction:column; }
+.restaurant-results .restaurant-grid { flex:1; min-height:150px; }
+.restaurant-results .restaurant-card { max-height:none; }
+.category-question > .question-art { height:18dvh; display:block; margin:auto; }

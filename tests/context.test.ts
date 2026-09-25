@@ -13,6 +13,7 @@ import {
   type ContextDependencies,
 } from "../lib/server/context";
 import { KmsTokenVault } from "../lib/server/calendar-oauth";
+import { createSessionInput } from "../lib/domain/schema";
 import { newSession, applyAnswer } from "../lib/domain/session";
 const now = "2026-09-24T04:00:00.000Z";
 const events = [
@@ -37,6 +38,17 @@ const absent: ContextDependencies = {
 };
 afterEach(() => vi.useRealTimers());
 describe("M4 context boundaries", () => {
+  it("retains explicit search scope without retaining GPS coordinates", async () => {
+    for (const searchRadiusM of [3000, 10000] as const) {
+      const input = createSessionInput.parse({requestId: "radius", launchId: "open", searchRadiusM,
+        location: {latitude: 22.28, longitude: 114.185}});
+      const context = await collectContext("u", input, absent, now);
+      expect(context.searchRadiusM).toBe(searchRadiusM);
+      expect(JSON.stringify(context)).not.toContain("latitude");
+    }
+    expect(createSessionInput.safeParse({requestId: "r", launchId: "l", area: "中環", searchRadiusM: 50000}).success).toBe(false);
+  });
+
   it("resolves manual centroids and GPS to approximate area without event locations", () => {
     expect(resolveLocation({ area: "灣仔" })).toMatchObject({
       source: "manual",

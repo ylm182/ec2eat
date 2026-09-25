@@ -175,6 +175,7 @@ export async function collectContext(
           ? "dinner"
           : "other",
     area: place.area,
+    ...(input.searchRadiusM ? { searchRadiusM: input.searchRadiusM } : {}),
     locationSource: place.source,
     weather:
       weather.status === "fulfilled"

@@ -9,6 +9,8 @@ import {
 import { clientAuth } from "@/lib/client/firebase";
 import { AccountDataControls } from "./DataControls";
 import { AppWarmup } from "./AppWarmup";
+import { CalendarConnection } from "./CalendarConnection";
+import { Loading } from "./Loading";
 import { copy } from "@/lib/copy";
 export function Account({
   onAuthorizationChange,
@@ -90,18 +92,13 @@ export function Account({
   return (
     <section className="account" aria-label={copy.account.label}>
       {verifiedUid && <AppWarmup uid={verifiedUid} />}
+      <details className="account-menu"><summary aria-label="帳戶設定">⚙</summary><div className="settings-panel">
+      <h2>帳戶設定</h2>
+      {verifiedUid && <CalendarConnection uid={verifiedUid} />}
       {(verifiedUid || deletionUid) && (
         <AccountDataControls uid={(verifiedUid || deletionUid)!} />
       )}
-      {state === "loading" && <p role="status">{copy.account.loading}</p>}
-      {state === "setup" && <p>{copy.setup}</p>}
-      {state === "signed-out" && (
-        <button className="primary" disabled={busy} onClick={login}>
-          {busy ? copy.account.signingIn : copy.login}
-          <span aria-hidden>↗</span>
-        </button>
-      )}
-      {message && <p role="status">{message}</p>}
+      {message && state !== "allowed" && <p role="status">{message}</p>}
       {(state === "allowed" || state === "denied") && (
         <button
           className="text-button"
@@ -113,6 +110,17 @@ export function Account({
           {copy.logout}
         </button>
       )}
+      </div></details>
+      {state === "loading" && <Loading label="登入中" />}
+      {(state === "denied" || state === "signed-out") && message && <p role="alert">{message}</p>}
+      {state === "setup" && <p>{copy.setup}</p>}
+      {state === "signed-out" && (
+        <button className="primary" disabled={busy} onClick={login}>
+          {busy ? copy.account.signingIn : copy.login}
+          <span aria-hidden>↗</span>
+        </button>
+      )}
+
     </section>
   );
 }

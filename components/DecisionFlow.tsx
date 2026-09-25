@@ -1,10 +1,10 @@
 "use client";
-import { DeleteSession } from "./DataControls";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { currentLaunchId } from "@/lib/client/launch";
 import { RestaurantResults } from "./RestaurantResults";
-import { CalendarConnection } from "./CalendarConnection";
+import { EntrySwipe } from "./EntrySwipe";
+import { Loading } from "./Loading";
 import { resolveLocation } from "@/lib/context/location";
 import { Account } from "./Account";
 import {
@@ -24,7 +24,7 @@ export function DecisionFlow() {
   const [uid, setUid] = useState<string | null>(null);
   return (
     <>
-      <h1 className="small-title">{text.heading}</h1>
+
       <Account onAuthorizationChange={setUid} />
       {uid ? (
         <AuthenticatedDecision key={uid} uid={uid} />
@@ -74,7 +74,7 @@ function AuthenticatedDecision({ uid }: { uid: string }) {
         setLocationMessage("定位未獲批准或暫時不可用，請手動揀地區。");
         setLocating(false);
       },
-      { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 },
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 0 },
     );
   }
 
@@ -141,7 +141,7 @@ function AuthenticatedDecision({ uid }: { uid: string }) {
     // This component is keyed by verified UID.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  async function start() {
+  async function start(searchRadiusM: 3000 | 10000 = 3000) {
     if (locked.current) return;
     locked.current = true;
     setBusy(true);
@@ -150,6 +150,7 @@ function AuthenticatedDecision({ uid }: { uid: string }) {
       const body = createRequest.current ?? {
         requestId: crypto.randomUUID(),
         launchId: currentLaunchId(),
+        searchRadiusM,
         ...(location ? { location } : { area }),
       };
       createRequest.current = body;
@@ -249,7 +250,11 @@ function AuthenticatedDecision({ uid }: { uid: string }) {
       setLoading(false);
     }
   }
-  if (loading) return <p role="status">{text.resume}</p>;
+  useEffect(() => {
+    if (!loading && !session && !recoverId && !createRequest.current) void locate();
+    // Request fresh location for every new decision, never persist coordinates.
+  }, [loading, session?.id, recoverId]);
+  if (loading) return <Loading label="載入中" />;
   const question = session?.questions.at(-1);
   return (
     <section className="live-decision">
@@ -269,48 +274,12 @@ function AuthenticatedDecision({ uid }: { uid: string }) {
           </button>
         </div>
       ) : null}
-      {!session && <CalendarConnection uid={uid} />}
-      {session && <DeleteSession uid={uid} session={session} />}
-      {session && (
-        <div className="hint">
-          <p>
-            {session.context.availability.fixture === "available"
-              ? "合成測試情境 · "
-              : ""}
-            {session.context.area} ·{" "}
-            {session.context.locationSource === "gps" ? "定位地區" : "手動地區"}{" "}
-            · {session.context.weather ? "已取得天氣" : "天氣未知"} ·{" "}
-            {session.context.calendar ? "已取得行程提示" : "未使用行程"}
-            。今次提示已固定。
-          </p>
-          {session.context.calendar && (
-            <p>
-              {session.context.calendar.nextEventSoon
-                ? "一小時內有定時行程，會優先考慮用餐速度。"
-                : "未有一小時內嘅定時行程提示。"}
-              你的答案仍然優先。
-            </p>
-          )}
-          {session.context.weather?.provenance.source === "google-weather" && (
-            <p>天氣資料：Google Weather</p>
-          )}
-        </div>
-      )}
+      {session && <div className="session-meta">{session.context.area}{session.context.availability.fixture === "available" ? " · 測試" : ""}{session.context.weather?.provenance.source === "google-weather" && <span> · Google Weather</span>}</div>}
       {!session ? (
         <>
-          <p>定位用嚟了解附近地區、天氣及搜尋餐廳；亦可以直接手動選擇。</p>
-          <button
-            type="button"
-            className="text-button"
-            disabled={
-              busy || locating || !!createRequest.current || !!recoverId
-            }
-            onClick={locate}
-          >
-            {locating ? "定位中…" : "使用目前位置"}
-          </button>
-          {locationMessage && <p role="status">{locationMessage}</p>}
-          <label htmlFor="area">{text.areaLabel}</label>
+          {locating && <Loading label="定位中" />}
+          {!location && !locating && <p className="hint">{locationMessage}</p>}
+          <label className="sr-only" htmlFor="area">{text.areaLabel}</label>
           <select
             id="area"
             value={area}
@@ -328,18 +297,10 @@ function AuthenticatedDecision({ uid }: { uid: string }) {
               <option key={a}>{a}</option>
             ))}
           </select>
-          <p className="hint">{text.context}</p>
-          <button
-            className="primary"
-            disabled={busy || locating || !!recoverId || !area}
-            onClick={start}
-          >
-            {busy
-              ? text.loading
-              : createRequest.current
-                ? text.retry
-                : text.start}
-          </button>
+          <EntrySwipe kind="range" disabled={busy || locating || !!recoverId || !area}
+            onChoose={(direction) => void start(direction === "left" ? 3000 : 10000)} />
+          {busy && <Loading label="準備中" />}
+
         </>
       ) : session.status === "QUESTIONING" && question ? (
         <>
@@ -387,23 +348,6 @@ function AuthenticatedDecision({ uid }: { uid: string }) {
               <Link href="/history">睇返已選擇記錄 →</Link>
             </p>
           )}
-          <h2>{text.trail}</h2>
-          <ol>
-            {session.answers.map((a) => {
-              const q = session.questions.find(
-                (q) => q.instanceId === a.questionInstanceId,
-              )!;
-              return (
-                <li key={a.questionInstanceId}>
-                  {q.definition.prompt}{" "}
-                  {a.action === "neutral"
-                    ? text.either
-                    : q.definition.options.find((o) => o.id === a.optionId)
-                        ?.label}
-                </li>
-              );
-            })}
-          </ol>
           <button
             className="text-button"
             onClick={() => {

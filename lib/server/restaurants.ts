@@ -97,7 +97,7 @@ export function restaurantRepository(
         input.expandArea &&
         (!current.search ||
           current.search.result !== "empty" ||
-          current.search.expanded)
+          current.search.expanded || current.search.radiusM >= 10000)
       )
         throw new ApiError(
           409,
@@ -155,7 +155,8 @@ export function restaurantRepository(
         await budget();
         const distance = stopped.preferences.distanceTolerance;
         const base =
-          distance?.state === "answered" && distance.value >= 0.8 ? 5000 : 1500;
+          stopped.context.searchRadiusM ??
+          (distance?.state === "answered" && distance.value >= 0.8 ? 5000 : 1500);
         const radius = input.expandArea
           ? stopped.search!.radiusM < 5000
             ? 5000

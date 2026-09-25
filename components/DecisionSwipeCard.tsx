@@ -11,6 +11,8 @@ import {
 import TinderCard from "react-tinder-card";
 import type { z } from "zod";
 import { answerInput, type QuestionDefinition } from "@/lib/domain/schema";
+import { QuestionArt } from "./QuestionArt";
+import { Loading } from "./Loading";
 import { copy } from "@/lib/copy";
 
 export type SwipeSubmission = z.infer<typeof answerInput>;
@@ -242,14 +244,15 @@ function QuestionCard({
           {progress} / ~6
         </span>
       </div>
-      <p id={instructionsId} className="swipe-instructions">
+      <p id={instructionsId} className="sr-only">
         {question.definition.kind === "binary"
           ? copy.swipe.instructions
           : copy.swipe.categoryInstructions}
       </p>
       {question.definition.kind === "category" ? (
         <section className="category-question">
-          <h2 id={promptId}>{question.definition.prompt}</h2>
+          <QuestionArt kind="home" />
+          <h2 className="sr-only" id={promptId}>{question.definition.prompt}</h2>
           <div className="category-grid">
             {question.definition.options.map((option) => (
               <button
@@ -300,16 +303,14 @@ function QuestionCard({
                 className="question-face"
                 data-direction={active ?? "none"}
               >
-                <span className="question-symbol" aria-hidden="true">
-                  ✳
-                </span>
-                <h2 id={promptId}>{question.definition.prompt}</h2>
+                <QuestionArt dimension={question.definition.dimensionId} />
+                <h2 className="sr-only" id={promptId}>{question.definition.prompt}</h2>
                 <div className="question-options">
                   <span>{left!.label}</span>
                   <span aria-hidden="true">/</span>
                   <span>{right!.label}</span>
                 </div>
-                <p className="card-footnote">{copy.swipe.noWrongAnswer}</p>
+
               </article>
             </TinderCard>
           </div>
@@ -344,8 +345,9 @@ function QuestionCard({
           </div>
         </>
       )}
+      {status === "saving" && <Loading label="儲存中" announce={false} />}
       <div className="answer-status" id={statusId}>
-        <p role="status" aria-live="polite">
+        <p className="sr-only" role="status" aria-live="polite">
           {chosen
             ? `${copy.swipe.chosen}「${chosen}」 · ${status === "saving" ? copy.swipe.saving : status === "error" ? copy.swipe.unsaved : copy.swipe.saved}`
             : copy.swipe.tapHint}
