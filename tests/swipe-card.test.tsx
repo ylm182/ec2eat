@@ -104,6 +104,22 @@ describe("real react-tinder-card integration", () => {
     drag(card(container), 20, 0);
     expect(onSubmit).not.toHaveBeenCalled();
   });
+  it("routes illustration touches through the HTML card surface", async () => {
+    const onSubmit = vi.fn<DecisionSwipeCardProps["onSubmit"]>(async () => {});
+    const { container } = render(<DecisionSwipeCard {...base} onSubmit={onSubmit} />);
+    const art = container.querySelector("svg.question-art") as SVGSVGElement;
+    expect(typeof art.className).not.toBe("string");
+    expect(art.style.pointerEvents).toBe("none");
+    // Browsers hit-test through the noninteractive SVG to this parent.
+    // jsdom does not perform coordinate-based hit testing.
+    const surface = art.parentElement!;
+    expect(typeof surface.className).toBe("string");
+    fireEvent.touchStart(surface, { touches: [{clientX: 200, clientY: 300}] });
+    fireEvent.touchMove(surface, { touches: [{clientX: 350, clientY: 300}] });
+    fireEvent.touchEnd(surface, { touches: [] });
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    expect(onSubmit.mock.calls[0][0].action).toBe("right");
+  });
   it("touch gestures use the same library path", async () => {
     const onSubmit = vi.fn<DecisionSwipeCardProps["onSubmit"]>(async () => {});
     const { container } = render(
