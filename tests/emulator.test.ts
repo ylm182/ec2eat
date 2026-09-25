@@ -1883,3 +1883,27 @@ it("Maps configuration requires an allowlisted identity and never returns the se
     else process.env.GOOGLE_MAPS_BROWSER_API_KEY = original;
   }
 });
+
+it("physically clears expired weather from every replay collection while preserving decisions", async () => {
+  const { cleanWeather } = await import("../functions/src/weather-cleanup");
+  const { Timestamp } = await import("firebase-admin/firestore");
+  const { db } = adminServices();
+  const root = db.collection("users").doc("weather-cleanup-test");
+  const now = Date.now();
+  const expired = { weather: { condition: "RAIN", provenance: { source: "google-weather", expiresAt: Timestamp.fromMillis(now - 1000) } }, availability: { weather: "available", calendar: "available" } };
+  for (const group of ["sessions", "operations", "restaurantOperations"]) {
+    const payload = { context: expired, revision: 7, decision: { selectedPlaceId: "kept" } };
+    await root.collection(group).doc("expired").set(group === "sessions" ? payload : { response: payload, hash: "kept" });
+  }
+  await root.collection("sessions").doc("fresh").set({ context: { ...expired, weather: { ...expired.weather, provenance: { ...expired.weather.provenance, expiresAt: Timestamp.fromMillis(now + 10000) } } } });
+  expect(await cleanWeather(db, now)).toBeGreaterThanOrEqual(3);
+  for (const group of ["sessions", "operations", "restaurantOperations"]) {
+    const doc = (await root.collection(group).doc("expired").get()).data()!;
+    const payload = group === "sessions" ? doc : doc.response;
+    expect(payload.context.weather).toBeNull();
+    expect(payload.context.availability).toEqual({ weather: "absent", calendar: "available" });
+    expect(payload.revision).toBe(7);
+    expect(payload.decision.selectedPlaceId).toBe("kept");
+  }
+  expect((await root.collection("sessions").doc("fresh").get()).get("context.weather.condition")).toBe("RAIN");
+});

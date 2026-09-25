@@ -1,4 +1,5 @@
 import "server-only";
+import { withoutExpiredWeather } from "../context/weather-retention";
 import { assertDataActive } from "./data-guard";
 import { Timestamp, type Firestore } from "firebase-admin/firestore";
 import {
@@ -28,7 +29,7 @@ export function encodeDocument(value: unknown, key = ""): unknown {
   if (Array.isArray(value)) return value.map((v) => encodeDocument(v));
   if (value && typeof value === "object")
     return Object.fromEntries(
-      Object.entries(value).map(([k, v]) => [k, encodeDocument(v, k)]),
+      Object.entries(withoutExpiredWeather(value as Record<string, unknown>)).map(([k, v]) => [k, encodeDocument(v, k)]),
     );
   return value;
 }
@@ -36,9 +37,9 @@ export function decodeDocument(value: unknown): unknown {
   if (value instanceof Timestamp) return value.toDate().toISOString();
   if (Array.isArray(value)) return value.map(decodeDocument);
   if (value && typeof value === "object")
-    return Object.fromEntries(
+    return withoutExpiredWeather(Object.fromEntries(
       Object.entries(value).map(([k, v]) => [k, decodeDocument(v)]),
-    );
+    ));
   return value;
 }
 // Repositories are scoped once to a verified identity. No route/body UID is accepted.

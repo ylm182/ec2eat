@@ -1,4 +1,5 @@
 import "server-only";
+import { WEATHER_TTL_MS } from "../context/weather-retention";
 import type { Firestore } from "firebase-admin/firestore";
 import type { z } from "zod";
 import {
@@ -182,7 +183,7 @@ export async function collectContext(
       weather.status === "fulfilled"
         ? {
             ...weather.value,
-            provenance: provenance("google-weather", 3600000),
+            provenance: provenance("google-weather", WEATHER_TTL_MS),
           }
         : null,
     calendar:

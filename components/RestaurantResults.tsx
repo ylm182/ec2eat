@@ -1,4 +1,5 @@
 "use client";
+import { SelectionFireworks } from "./SelectionFireworks";
 import { RestaurantMap } from "./RestaurantMap";
 import { Loading } from "./Loading";
 import { RestaurantLoading } from "./RestaurantLoading";
@@ -31,6 +32,8 @@ export function RestaurantResults({
   onSession: (s: DecisionSession) => void;
   skipAuto?: boolean;
 }) {
+  const [celebrate, setCelebrate] = useState(false);
+  const successHeading = useRef<HTMLHeadingElement>(null);
   const [view, setView] = useState<"list" | "map">("list");
   const [focusedPlace, setFocusedPlace] = useState<string | null>(null);
   useEffect(() => {
@@ -77,10 +80,10 @@ export function RestaurantResults({
     const data = z
       .object({ cards: z.array(restaurantCardSchema).max(10) })
       .parse(
-        await authorizedJson(uid, path + "/restaurants", undefined, signal),
+        await authorizedJson(uid, session.status === "SELECTED" ? `/api/history/${session.id}/restaurant` : path + "/restaurants", undefined, signal),
       );
-    setCards(data.cards);
-    } finally { setDetailsLoading(false); }
+    if (!signal?.aborted) setCards(data.cards);
+    } finally { if (!signal?.aborted) setDetailsLoading(false); }
   }
   useEffect(() => {
     setCards([]);
@@ -157,9 +160,13 @@ export function RestaurantResults({
     };
     selection.current = body;
     try {
-      await decisionApi(uid, path + "/select", body);
+      const saved = await decisionApi(uid, path + "/select", body);
       selection.current = null;
-      await refresh();
+      if (mounted.current) {
+        setView("list");
+        setCelebrate(saved.status === "SELECTED" && saved.decision.selectedPlaceId === placeId);
+        callbacks.current.onSession(saved);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "未能儲存，請重試。");
       if (
@@ -170,7 +177,7 @@ export function RestaurantResults({
       try {
         await refresh();
       } catch {
-        /* A failed save never exposes Maps. */
+        /* Keep the save error; map preview does not imply selection. */
       }
     } finally {
       locked.current = false;
@@ -179,6 +186,10 @@ export function RestaurantResults({
   }
   const selected = session.status === "SELECTED";
   const empty = session.search?.result === "empty";
+  const visibleCards = selected ? cards.filter(c => c.placeId === session.decision.selectedPlaceId) : cards;
+  useEffect(() => {
+    if (selected && celebrate) successHeading.current?.scrollIntoView({ block: "start", behavior: "auto" });
+  }, [selected, celebrate]);
   return (
     <section aria-label="餐廳選擇" className="restaurant-results">
       {(searching || detailsLoading) ? <RestaurantLoading phase={searching ? "search" : "details"} /> : busy ? <Loading label="儲存中" /> : null}
@@ -208,19 +219,20 @@ export function RestaurantResults({
         </>
       ) : (
         <>
-          {selected && <h2>已儲存你的選擇</h2>}
-          {cards.length === 1 && <p>目前只搵到一間可用餐廳。</p>}
-          {!cards.length && !detailsLoading && <p>暫時未有餐廳資料。</p>}
-          <div className="results-tabs" aria-label="顯示方式">
+          {selected && <h2 ref={successHeading} role="status">已儲存你的選擇</h2>}
+          {selected && celebrate && !detailsLoading && !busy && <SelectionFireworks onDone={() => setCelebrate(false)} />}
+          {!selected && cards.length === 1 && <p>目前只搵到一間可用餐廳。</p>}
+          {!visibleCards.length && !detailsLoading && <p>暫時未有餐廳資料。</p>}
+          {!selected && <div className="results-tabs" aria-label="顯示方式">
             <button aria-pressed={view === "list"} onClick={() => setView("list")}>清單</button>
             <button aria-pressed={view === "map"} onClick={() => setView("map")}>地圖</button>
-          </div>
-          {view === "map" ? <RestaurantMap uid={uid} cards={cards} onView={id => { setFocusedPlace(id); setView("list"); }} /> : <div className="restaurant-grid" role="region" aria-label="餐廳推薦清單" tabIndex={0}>
-            {cards.map((card, index) => (
+          </div>}
+          {!selected && view === "map" ? <RestaurantMap uid={uid} cards={visibleCards} onView={id => { setFocusedPlace(id); setView("list"); }} /> : <div className="restaurant-grid" role="region" aria-label="餐廳推薦清單" tabIndex={0}>
+            {visibleCards.map((card, index) => (
               <article className="restaurant-card" id={"restaurant-" + card.placeId} key={card.placeId}>
                 <p>
                   {card.source === "synthetic" ? "合成測試資料 · " : ""}
-                  {index === 0 ? "1 · 首選推薦" : `${index + 1} · 推薦選擇`}
+                  {selected ? "今次食呢間" : index === 0 ? "1 · 首選推薦" : `${index + 1} · 推薦選擇`}
                   {session.decision.selectedPlaceId === card.placeId
                     ? " · 已選擇"
                     : ""}
@@ -284,6 +296,7 @@ export function RestaurantResults({
                     {(card.distanceM / 1000).toFixed(1)} 公里（非步行距離）
                   </p>
                 )}
+                <div className="restaurant-actions">
                 {!selected && (
                   <button
                     className="primary"
@@ -301,9 +314,16 @@ export function RestaurantResults({
                       : "揀呢間"}
                   </button>
                 )}
-                {card.source === "google-places" && (
+                {card.source === "google-places" ? <a
+                  className="restaurant-map-link"
+                  href={mapsUrl(card.placeId)}
+                  target="_blank" rel="noopener noreferrer"
+                  aria-label={`在 Google Maps 查看${card.name ?? "餐廳"}`}
+                ><span translate="no">Google Maps</span><span aria-hidden="true"> ↗</span></a>
+                  : <button disabled className="restaurant-map-link">地圖未提供</button>}
+                </div>
+                {card.source === "google-places" && card.attributions.length > 0 && (
                   <div className="places-attribution">
-                    <span translate="no">Google Maps</span>
                     {card.attributions.map((a, i) => (
                       <p key={i}>
                         {a.uri ? (
@@ -327,19 +347,8 @@ export function RestaurantResults({
 
           {selected && (
             <div className="hint">
-              <p>選擇已儲存，未代表已到訪。之後再次開啟先確認用餐結果。</p>
-              {session.search?.source === "synthetic" ? (
-                <p>模擬選擇已儲存；合成餐廳冇真實地圖。</p>
-              ) : (
-                <a
-                  className="primary"
-                  href={mapsUrl(session.decision.selectedPlaceId!)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  開啟 Google Maps
-                </a>
-              )}
+              <p>選擇已儲存；食完可以喺歷史確認到訪。</p>
+
             </div>
           )}
         </>

@@ -293,7 +293,7 @@ export function HistoryCard({
                 : "未有可顯示記錄（未知或已到保留期限）"}
             </p>
             {s.context.weather?.provenance.source === "google-weather" && (
-              <p className="hint">天氣資料：Google Weather</p>
+              <p className="hint">天氣資料：Google Maps</p>
             )}
             <p>
               行程：

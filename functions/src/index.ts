@@ -43,3 +43,13 @@ export const warmLaya = onSchedule(
     );
   },
 );
+
+// Physically remove provider content from sessions and every replay copy.
+export const cleanExpiredWeather = onSchedule(
+  { schedule: "every 5 minutes", timeZone: "Asia/Hong_Kong", region: "asia-east1", timeoutSeconds: 300, maxInstances: 1, retryCount: 3 },
+  async () => {
+    const { cleanWeather } = await import("./weather-cleanup");
+    const removed = await cleanWeather(getFirestore());
+    console.info(JSON.stringify({ event: "weather_cleanup", removed }));
+  },
+);

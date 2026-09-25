@@ -25,7 +25,7 @@ export function engineContext(session: DecisionSession): EngineContext {
   return {
     rain:
       session.context.weather && session.context.weather.condition !== "UNKNOWN"
-        ? /rain|雨/i.test(session.context.weather.condition)
+        ? /rain|drizzle|shower|thunderstorm|雨/i.test(session.context.weather.condition)
         : null,
     nextEventSoon: session.context.calendar?.nextEventSoon ?? null,
   };

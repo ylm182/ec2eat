@@ -1,4 +1,5 @@
 "use client";
+import { WeatherSummary } from "./WeatherSummary";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { currentLaunchId } from "@/lib/client/launch";
@@ -283,7 +284,7 @@ function AuthenticatedDecision({ uid }: { uid: string }) {
           </button>
         </div>
       ) : null}
-      {session?.status === "QUESTIONING" && <div className="session-meta">{session.context.area}{session.context.availability.fixture === "available" ? " · 測試" : ""}{session.context.weather?.provenance.source === "google-weather" && <span> · Google Weather</span>}</div>}
+      {session?.status === "QUESTIONING" && <div className="session-meta">{session.context.area}{session.context.availability.fixture === "available" ? " · 測試" : ""}<WeatherSummary weather={session.context.weather} /></div>}
       {!session ? (
         <>
           {locating && <Loading label="定位中" />}

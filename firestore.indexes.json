@@ -120,6 +120,36 @@
           "queryScope": "COLLECTION"
         }
       ]
+    },
+    {
+      "collectionGroup": "sessions",
+      "fieldPath": "context.weather.provenance.expiresAt",
+      "indexes": [
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION_GROUP"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "operations",
+      "fieldPath": "response.context.weather.provenance.expiresAt",
+      "indexes": [
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION_GROUP"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "restaurantOperations",
+      "fieldPath": "response.context.weather.provenance.expiresAt",
+      "indexes": [
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION_GROUP"
+        }
+      ]
     }
   ]
 }

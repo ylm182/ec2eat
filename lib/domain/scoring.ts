@@ -19,7 +19,7 @@ export function scoringInput(session: DecisionSession): DecisionInput {
     preferences: { ...unknownPreferences(), ...session.preferences },
     priors: {},
     categoryPreference: categoryPreference(session),
-    context: engineContext(session),
+    context: { ...engineContext(session), rain: session.context.weather?.provenance.modelInputAllowed ? engineContext(session).rain : null },
   };
 }
 // Apply only to an uncommitted draft. The original issued/answered trail is retained verbatim.

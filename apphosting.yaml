@@ -49,8 +49,11 @@ env:
   - variable: PLACES_MODEL_INPUT_APPROVED
     value: "true"
     availability: [ RUNTIME ]
+  - variable: GOOGLE_WEATHER_API_KEY
+    secret: GOOGLE_WEATHER_API_KEY@1
+    availability: [ RUNTIME ]
   - variable: GOOGLE_WEATHER_PERSIST_APPROVED
-    value: "false"
+    value: "true"
     availability: [ RUNTIME ]
   - variable: OAUTH_CLIENT_SECRET
     secret: OAUTH_CLIENT_SECRET@1
