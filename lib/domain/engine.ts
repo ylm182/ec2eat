@@ -170,13 +170,25 @@ export function nextQuestion(
       q.definition.dimensionId ? [q.definition.dimensionId] : [],
     ),
   );
-  const useful = usefulDimensions(
+  let useful = usefulDimensions(
     candidates,
     ranked,
     session.preferences,
     asked,
     context,
   );
+  // Rounded model weights can collapse to one candidate and zero out variance.
+  // Before the minimum, recover useful questions from deterministic ranking;
+  // model confidence must not masquerade as genuine question exhaustion.
+  if (!useful.length && session.answers.length < 3) {
+    useful = usefulDimensions(
+      candidates,
+      rankCandidates(candidates, session.preferences, {}, categoryPreference(session)),
+      session.preferences,
+      asked,
+      context,
+    );
+  }
   const binaryAnswers = session.answers.filter(
     (a) =>
       session.questions.find((q) => q.instanceId === a.questionInstanceId)
