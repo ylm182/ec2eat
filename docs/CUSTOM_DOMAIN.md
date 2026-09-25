@@ -15,7 +15,8 @@ Configured and verified:
   ec2eat.fun. Console confirmed both OAuth client and branding saves.
 - apphosting.yaml APP_ORIGIN becomes https://ec2eat.fun so strict mutation-origin
   validation and Calendar authorization/token exchange use the new origin.
-- Requests to the exact former hosted.app hostname redirect permanently (308) to
+- Middleware reads App Hosting X-Forwarded-Host (falling back to Host). Requests
+  to the exact former hosted.app hostname redirect permanently (308) to
   the same path/query on ec2eat.fun. Localhost and other hosts are not redirected.
 
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN remains ec2eat-davidyu-prod.firebaseapp.com.
@@ -41,3 +42,8 @@ existing Calendar or grant consent on the user's behalf just to test migration.
 References:
 - https://firebase.google.com/docs/app-hosting/custom-domain
 - https://firebase.google.com/docs/auth/web/redirect-best-practices
+
+The first deployment used Next config Host matching, which live verification
+found ineffective behind App Hosting. Replaced with tested forwarded-host
+middleware; redirect responses are private/no-store.
+Source: https://firebase.blog/posts/2024/07/app-hosting-updates/
