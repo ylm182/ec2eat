@@ -22,23 +22,41 @@ Restaurant pass budget: 3 seconds plus at most 150 ms bookkeeping. Whole tournam
 
 ## Results and cost
 
-Store/display up to ten instead of three; the existing session schema already permits ten. Detail fetching and client validation now permit ten. Results retain the one-card-at-a-time previous/next controls. Selected-only history fetches one restaurant. Existing smaller histories work unchanged.
+Store/display up to ten instead of three; the existing session schema already permits ten. Detail fetching and client validation now permit ten. Per the owner’s follow-up, results use one vertically scrolling panel containing all available recommendations, numbered 1–10. History keeps its existing pager. Selected-only history fetches one restaurant. Existing smaller histories work unchanged.
 
 Typical discovery cost rises from three to seven search requests. Results can request ten details and up to ten photo-media resolutions rather than three each. Ranking uses up to six sequential logical calls on the current single-replica CPU endpoint. No hardware/replica changes. The pool is request-local, not a stored restaurant directory.
 
 ## Verification
 
-- 125 unit/component tests and 40 emulator tests pass; production build passed before the restaurant deadline adjustment, and typecheck passes after it. Firebase also rebuilds the deployed commit.
+- 127 unit/component tests and 41 emulator tests pass, including map pin/location lifecycle and authenticated browser configuration. Production build, typecheck, and client bundle secret scan pass. Firebase also rebuilds the deployed commit.
 - Tests cover all candidate counts around batch boundaries, all-candidate participation, unique finalists, final-pass scoring, partial-failure and deadline fallback, malformed IDs, 50-candidate cap, popularity request, and persistence/display/selection of the tenth recommendation.
 - First live attempt at the old 1.75-second limit fell back on pass two: 50 discovered, ten deterministic results. This verified failure behavior and justified changing only the restaurant deadline.
 - Second live run: 50 unique real Google candidates, six successful Laya passes, ten finalists, no fallback, ~8,314 ms total ranking. Per-pass times ~1,105–2,032 ms. Developer Mac measurement with synthetic user preferences; not production p95. No provider payload/IDs/secrets written to fixtures or logs.
 
 ## Frontend checks for the owner
 
-1. Start a new 3 km choice, finish answers: up to ten restaurant cards, with previous/next controls showing 1/N through N/N. Repeat with 10 km.
+1. Start a new 3 km choice, finish answers: up to ten numbered restaurant cards in one scrollable panel. Scroll within the panel to reach the tenth; header/settings stay in the mobile shell. Repeat with 10 km.
 2. During retrieval/ranking, large loading indicator stays visible. A longer wait than the old single-pass flow is expected.
 3. Select a later card (especially number ten), open Maps, then check history: the selected restaurant and question trail must agree. Visit status remains pending until later confirmation.
 4. Where fewer than ten eligible places exist, show only those available, never fabricated fillers.
 5. Existing saved selections and flip-card histories remain readable.
 
 Permission remains closed on the owner's earlier confirmation. Firebase regions and Weather settings are unchanged.
+
+
+## List and Google Map views
+
+Results use one vertical scroll panel with up to ten cards. The Map tab loads Google Maps only when opened. Numbered pins match list order; tapping a pin and 查看餐廳 returns to that card. Google Places coordinates are returned with live details only, never persisted in the decision record. Missing coordinates and synthetic records are not plotted as real restaurants.
+
+A fresh browser location watch supplies the blue dot while the map is open. Denied/unavailable location leaves restaurant pins usable; no guessed blue dot is shown. The watch stops on leaving the map. No precise location is written to storage.
+
+Production uses a separate `GOOGLE_MAPS_BROWSER_API_KEY` runtime secret, restricted to the ec2eat production HTTPS origin and Maps JavaScript API (`maps-backend.googleapis.com`). This is a browser-visible key, not the server Places credential. Local testing requires a separately restricted development key; emulator-only runs can exercise the unavailable-map message. Opening the map can incur Google Maps usage charges.
+
+Frontend acceptance checks:
+- Scroll from recommendation 1 to 10 in the results panel; page header stays in place.
+- Switch to 地圖: numbered pins match all returned restaurants with coordinates.
+- Tap pin 10 and 查看餐廳: return to the tenth list card; selection saves as before.
+- Allow location: a blue dot appears at the real current location; deny it: restaurant pins remain usable.
+- Switch between views repeatedly: no duplicate map controls or location watches.
+- Missing map configuration/network failure: readable retry message, list remains available.
+- Check a small mobile viewport: pan/zoom map and access Google attribution without page overflow.

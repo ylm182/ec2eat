@@ -150,6 +150,7 @@ describe("restaurant search and content boundaries", () => {
       transport,
     ).details("place-id", signal(), true, centre);
     expect(result.name).toBe("Provider name");
+    expect(result.location).toEqual(centre);
     expect(result.rating).toBeNull();
     expect(result.openNow).toBeNull();
     expect(result.photo).toBeNull();

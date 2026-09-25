@@ -768,3 +768,33 @@ main:has(.live-decision) { display:flex; flex-direction:column; }
 .restaurant-results .restaurant-grid { flex:1; min-height:150px; }
 .restaurant-results .restaurant-card { max-height:none; }
 .category-question > .question-art { height:18dvh; display:block; margin:auto; }
+
+/* Restaurant results scroll together in one panel; history keeps its own pager. */
+.restaurant-results .restaurant-grid {
+  display:block;
+  overflow-y:auto;
+  overflow-x:hidden;
+  overscroll-behavior-y:contain;
+  scroll-snap-type:none;
+  padding:4px 4px 12px;
+  scrollbar-width:thin;
+  -webkit-overflow-scrolling:touch;
+}
+.restaurant-results .restaurant-card {
+  overflow:visible;
+  max-height:none;
+  margin-bottom:16px;
+}
+.restaurant-results .restaurant-grid:focus-visible {
+  outline:2px solid var(--green);
+  outline-offset:-2px;
+  border-radius:24px;
+}
+
+.results-tabs { display:flex; gap:6px; padding:4px; background:#ede2ff; border-radius:18px; flex-shrink:0; }
+.results-tabs button { flex:1; border:0; border-radius:14px; padding:10px; background:transparent; font-weight:700; }
+.results-tabs button[aria-pressed="true"] { background:#7544c9; color:white; }
+.restaurant-map-panel { position:relative; flex:1; min-height:150px; display:flex; flex-direction:column; margin-top:8px; }
+.restaurant-map-canvas { flex:1; min-height:0; border-radius:20px; overflow:hidden; }
+.map-status { font-size:12px; margin:6px 0; }
+.map-loading,.map-message { position:absolute; inset:0 0 28px; display:flex; align-items:center; justify-content:center; flex-direction:column; background:#fff8edee; border-radius:20px; padding:20px; }

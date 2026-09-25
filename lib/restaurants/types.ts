@@ -7,6 +7,7 @@ export const attributionSchema = z.object({
 });
 export const restaurantCardSchema = z.object({
   placeId: placeIdSchema,
+  location: z.object({ latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180) }).nullable().optional(),
   name: z.string().nullable(),
   address: z.string().nullable(),
   businessStatus: z.string().nullable(),

@@ -40,6 +40,9 @@ env:
   - variable: PLACES_CONTENT_USE_APPROVED
     value: "true"
     availability: [ RUNTIME ]
+  - variable: GOOGLE_MAPS_BROWSER_API_KEY
+    secret: GOOGLE_MAPS_BROWSER_API_KEY@1
+    availability: [ RUNTIME ]
   - variable: GOOGLE_PLACES_API_KEY
     secret: GOOGLE_PLACES_API_KEY@2
     availability: [ RUNTIME ]

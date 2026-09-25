@@ -1847,3 +1847,27 @@ describe("M9 recomputed learning and deletion", () => {
     ).toBe(true);
   });
 });
+
+
+it("Maps configuration requires an allowlisted identity and never returns the server Places key", async () => {
+  const { GET } = await import("../app/api/maps/config/route");
+  expect((await GET(new Request("http://localhost:3000/api/maps/config"))).status).toBe(401);
+  const identity = await googleToken("map-config-route");
+  const headers = { Authorization: "Bearer " + identity.token };
+  const request = () => new Request("http://localhost:3000/api/maps/config", { headers });
+  expect((await GET(request())).status).toBe(403);
+  await adminServices().db.doc("allowedUsers/" + identity.uid).set({ enabled: true });
+  const original = process.env.GOOGLE_MAPS_BROWSER_API_KEY;
+  try {
+    delete process.env.GOOGLE_MAPS_BROWSER_API_KEY;
+    expect((await GET(request())).status).toBe(503);
+    process.env.GOOGLE_MAPS_BROWSER_API_KEY = "public-maps-test-key";
+    const response = await GET(request());
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect((await response.json()).data).toEqual({ apiKey: "public-maps-test-key" });
+  } finally {
+    if (original === undefined) delete process.env.GOOGLE_MAPS_BROWSER_API_KEY;
+    else process.env.GOOGLE_MAPS_BROWSER_API_KEY = original;
+  }
+});

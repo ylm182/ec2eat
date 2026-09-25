@@ -202,6 +202,7 @@ export class GooglePlacesProvider implements RestaurantProvider {
         /* Photos are optional; preserve the card and required author attribution when present. */
       }
     return {
+      location: value.location ?? null,
       distanceM:
         centre && value.location ? distanceM(centre, value.location) : null,
       placeId: id,

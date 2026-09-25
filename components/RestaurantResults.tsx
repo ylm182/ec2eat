@@ -1,4 +1,5 @@
 "use client";
+import { RestaurantMap } from "./RestaurantMap";
 import { Loading } from "./Loading";
 import { currentLaunchId } from "@/lib/client/launch";
 import { useEffect, useRef, useState } from "react";
@@ -29,7 +30,11 @@ export function RestaurantResults({
   onSession: (s: DecisionSession) => void;
   skipAuto?: boolean;
 }) {
-  const [index, setIndex] = useState(0);
+  const [view, setView] = useState<"list" | "map">("list");
+  const [focusedPlace, setFocusedPlace] = useState<string | null>(null);
+  useEffect(() => {
+    if (view === "list" && focusedPlace) document.getElementById("restaurant-" + focusedPlace)?.scrollIntoView({ block: "nearest" });
+  }, [view, focusedPlace]);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [cards, setCards] = useState<RestaurantCard[]>([]);
   const [busy, setBusy] = useState(false);
@@ -73,7 +78,6 @@ export function RestaurantResults({
         await authorizedJson(uid, path + "/restaurants", undefined, signal),
       );
     setCards(data.cards);
-    setIndex(0);
     } finally { setDetailsLoading(false); }
   }
   useEffect(() => {
@@ -204,13 +208,16 @@ export function RestaurantResults({
           <p>{session.decision.reason}</p>
           {cards.length === 1 && <p>目前只搵到一間可用餐廳。</p>}
           {!cards.length && !detailsLoading && <p>暫時未有餐廳資料。</p>}
-          {cards.length > 1 && <nav className="card-pager" aria-label="餐廳分頁"><button disabled={index === 0} onClick={() => setIndex(index - 1)}>←</button><span>{index + 1} / {cards.length}</span><button disabled={index === cards.length - 1} onClick={() => setIndex(index + 1)}>→</button></nav>}
-          <div className="restaurant-grid">
-            {cards.slice(index, index + 1).map((card) => (
-              <article className="restaurant-card" key={card.placeId}>
+          <div className="results-tabs" aria-label="顯示方式">
+            <button aria-pressed={view === "list"} onClick={() => setView("list")}>清單</button>
+            <button aria-pressed={view === "map"} onClick={() => setView("map")}>地圖</button>
+          </div>
+          {view === "map" ? <RestaurantMap uid={uid} cards={cards} onView={id => { setFocusedPlace(id); setView("list"); }} /> : <div className="restaurant-grid" role="region" aria-label="餐廳推薦清單" tabIndex={0}>
+            {cards.map((card, index) => (
+              <article className="restaurant-card" id={"restaurant-" + card.placeId} key={card.placeId}>
                 <p>
                   {card.source === "synthetic" ? "合成測試資料 · " : ""}
-                  {index === 0 ? "首選推薦" : "另一個選擇"}
+                  {index === 0 ? "1 · 首選推薦" : `${index + 1} · 推薦選擇`}
                   {session.decision.selectedPlaceId === card.placeId
                     ? " · 已選擇"
                     : ""}
@@ -313,7 +320,7 @@ export function RestaurantResults({
                 )}
               </article>
             ))}
-          </div>
+          </div>}
           <button
             className="text-button"
             disabled={busy}
