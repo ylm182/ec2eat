@@ -57,3 +57,26 @@ creating it; trigger a scheduled run once and inspect its ready/warming result.
 
 Cold startup 503, timeout and malformed output fallback are covered by backend tests.
 Real Hong Kong browser timing and UX remain the user's frontend test, as requested.
+
+## Deployment verification
+
+- Commit 42b3a99 pushed to GitHub main; App Hosting rollout build-2026-09-24-004
+  SUCCEEDED, serving 100% of traffic. /decide returned HTTP 200.
+- warmLaya is ACTIVE in asia-east1, with the configured HF_TOKEN version 1.
+- Cloud Scheduler firebase-schedule-warmLaya-asia-east1 is enabled, cron 0 11,17 * * *,
+  time zone Asia/Hong_Kong, OIDC using the project's compute service account.
+- Worker Cloud Run IAM grants run.invoker only to that service account; anonymous
+  worker request returned HTTP 403.
+- An explicitly triggered scheduler invocation completed successfully; sanitized
+  log at 2026-09-24T23:14:11.866652Z reports status=ready, reason=null, durationMs=2507.
+  This measures the whole warm-up, including Firestore; it is not a rank latency test.
+- New gcf-artifacts repository has seven-day build-image retention; this resolved
+  the post-deployment Firebase CLI cleanup-policy warning.
+- App-open warming is implemented at /api/app/open and legacy /api/app-open.
+  The architecture's /api/laya/warmup name is not a deployed route (404).
+
+Remaining: user-run signed-in frontend checks, Taiwan rank latency/fallback observation
+through actual decisions, and passive automatic idle scale-down observation. No live
+Places model input was enabled. The production worker uses existing project compute
+identity; no service-account keys were created.
+- Final anonymous checks of /api/app/open and /api/app-open both returned HTTP 401.

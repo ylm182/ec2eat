@@ -20,8 +20,8 @@ Candidate serving recipe. Five local validation tests passed. Real CPU inference
 passed English and Traditional Chinese two-candidate examples; both ranked the
 matching lunch first. These examples do not establish general ranking quality.
 Local unit tests are separate from real local model tests
-and from HF deployment validation. The application still exports a null installed
-recipe and falls back deterministically. Uploading these files does not enable it.
+and from HF deployment validation. The application now installs the verified handler recipe after the captured live
+endpoint tests. See docs/LAYA_DEPLOYMENT.md in the ec2eat project for rollout status.
 
 ## Deploy in steps
 

@@ -60,7 +60,9 @@ def main():
         assert response['runtimeVersion'] == 'laya==0.3.20'
         assert response['contract'] == 'ec2eat-laya-choice-v1'
         evidence['cases'].append({'request': sample['request'], 'response': response, 'seconds': seconds})
-    out = Path(__file__).resolve().parents[2] / 'tests/fixtures/laya/hf-smoke.json'
+    # Keep the committed contract fixture immutable: the recipe pins its SHA-256.
+    import tempfile
+    out = Path(tempfile.gettempdir()) / 'ec2eat-hf-smoke-latest.json'
     out.write_text(json.dumps(evidence, ensure_ascii=False, indent=2) + '\n')
     print('All four cases passed; synthetic fixture saved:', out)
 
