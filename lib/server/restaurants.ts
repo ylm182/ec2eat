@@ -238,7 +238,7 @@ export function restaurantRepository(
         );
       }
     },
-    async cards(id: string, selectedOnly = false) {
+    async cards(id: string, selectedOnly: boolean | "ranking" = false) {
       const s = await get(id);
       if (selectedOnly && s.status !== "SELECTED")
         throw new ApiError(404, "NOT_FOUND", "搵唔到呢次已儲存選擇。");
@@ -248,16 +248,16 @@ export function restaurantRepository(
       const cards = await Promise.all(
         s.decision.candidates
           .filter(
-            (c) => !selectedOnly || c.placeId === s.decision.selectedPlaceId,
+            (c) => selectedOnly !== true || c.placeId === s.decision.selectedPlaceId,
           )
-          .slice(0, selectedOnly ? 1 : 10)
+          .slice(0, selectedOnly === true ? 1 : 10)
           .map(async (c) => {
             try {
               return await bounded(5000, (signal) =>
                 p.details(
                   c.placeId,
                   signal,
-                  true,
+                  selectedOnly !== "ranking",
                   resolveLocation({ area: s.context.area }).location,
                 ),
               );

@@ -130,13 +130,13 @@ export class GooglePlacesProvider implements RestaurantProvider {
     location: Coordinates,
     radiusM: number,
     signal: AbortSignal,
+    restaurantOnly = true,
   ) {
     return this.search(
       "places:searchText",
       {
         textQuery: query,
-        includedType: "restaurant",
-        strictTypeFiltering: true,
+        ...(restaurantOnly ? { includedType: "restaurant", strictTypeFiltering: true } : {}),
         pageSize: 20,
         languageCode: "zh-TW",
         locationBias: { circle: { center: location, radius: radiusM } },

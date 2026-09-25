@@ -36,6 +36,7 @@ export function DecisionFlow() {
 }
 function AuthenticatedDecision({ uid }: { uid: string }) {
   const [session, setSession] = useState<DecisionSession | null>(null);
+  const [diningIntent, setDiningIntent] = useState<"meal" | "snack" | "any" | null>(null);
   const [area, setArea] = useState("");
   const [location, setLocation] = useState<{
     latitude: number;
@@ -124,6 +125,7 @@ function AuthenticatedDecision({ uid }: { uid: string }) {
       if (parsed.success) {
         createRequest.current = parsed.data;
         setArea(parsed.data.area ?? "");
+        setDiningIntent(parsed.data.diningIntent ?? "any");
       }
     }
   }
@@ -151,6 +153,7 @@ function AuthenticatedDecision({ uid }: { uid: string }) {
         requestId: crypto.randomUUID(),
         launchId: currentLaunchId(),
         searchRadiusM,
+        diningIntent: diningIntent ?? "any",
         ...(location ? { location } : { area }),
       };
       createRequest.current = body;
@@ -274,10 +277,11 @@ function AuthenticatedDecision({ uid }: { uid: string }) {
           </button>
         </div>
       ) : null}
-      {session && <div className="session-meta">{session.context.area}{session.context.availability.fixture === "available" ? " · 測試" : ""}{session.context.weather?.provenance.source === "google-weather" && <span> · Google Weather</span>}</div>}
+      {session?.status === "QUESTIONING" && <div className="session-meta">{session.context.area}{session.context.availability.fixture === "available" ? " · 測試" : ""}{session.context.weather?.provenance.source === "google-weather" && <span> · Google Weather</span>}</div>}
       {!session ? (
         <>
           {locating && <Loading label="定位中" />}
+          {!diningIntent ? <EntrySwipe key="meal" kind="meal" onChoose={direction => setDiningIntent(direction === "left" ? "meal" : direction === "right" ? "snack" : "any")} /> : <>
           {!location && !locating && <p className="hint">{locationMessage}</p>}
           <label className="sr-only" htmlFor="area">{text.areaLabel}</label>
           <select
@@ -297,8 +301,9 @@ function AuthenticatedDecision({ uid }: { uid: string }) {
               <option key={a}>{a}</option>
             ))}
           </select>
-          <EntrySwipe kind="range" disabled={busy || locating || !!recoverId || !area}
+          <EntrySwipe key="range" kind="range" disabled={busy || locating || !!recoverId || !area}
             onChoose={(direction) => void start(direction === "left" ? 3000 : 10000)} />
+          </>}
           {busy && <Loading label="準備中" />}
 
         </>
@@ -348,17 +353,7 @@ function AuthenticatedDecision({ uid }: { uid: string }) {
               <Link href="/history">睇返已選擇記錄 →</Link>
             </p>
           )}
-          <button
-            className="text-button"
-            onClick={() => {
-              sessionStorage.removeItem(key);
-              setSession(null);
-              setLocation(null);
-              setError("");
-            }}
-          >
-            {text.newDecision}
-          </button>
+
         </>
       )}
     </section>

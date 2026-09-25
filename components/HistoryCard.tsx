@@ -5,7 +5,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { z } from "zod";
 import { authorizedJson } from "@/lib/client/decision-api";
 import type { DecisionSession } from "@/lib/domain/schema";
-import { hongKongTime, outcomeLabels } from "@/lib/history/schema";
+import { hongKongTime } from "@/lib/history/schema";
 import {
   restaurantCardSchema,
   type RestaurantCard,
@@ -25,6 +25,9 @@ export function HistoryCard({
   uid: string;
   session: DecisionSession;
 }) {
+  const [confirming, setConfirming] = useState(false);
+  const [rankedCards, setRankedCards] = useState<RestaurantCard[]>([]);
+  const [rankError, setRankError] = useState("");
   const [flipped, setFlipped] = useState(false);
   const [visible, setVisible] = useState(false),
     [attempt, setAttempt] = useState(0);
@@ -73,6 +76,18 @@ export function HistoryCard({
       });
     return () => abort.abort();
   }, [uid, s.id, s.decision.selectedPlaceId, visible, attempt]);
+  useEffect(() => {
+    if (!flipped || rankedCards.length) return;
+    const abort = new AbortController();
+    setRankError("");
+    void authorizedJson(uid, "/api/history/" + s.id + "/ranking", undefined, abort.signal)
+      .then(data => {
+        const result = z.object({ cards: z.array(restaurantCardSchema).max(10) }).parse(data);
+        if (!abort.signal.aborted) setRankedCards(result.cards);
+      })
+      .catch(() => { if (!abort.signal.aborted) setRankError("餐廳名稱暫時未能讀取。"); });
+    return () => abort.abort();
+  }, [uid, s.id, flipped, rankedCards.length]);
   return (
     <article
       className="history-card"
@@ -94,21 +109,16 @@ export function HistoryCard({
               {meal[s.context.meal]} · {s.context.area}
             </p>
             <h2>{card?.name ?? "已選擇餐廳"}</h2>
-            <p className="history-id">餐廳編號：{s.decision.selectedPlaceId}</p>
             <p>
               選擇時間：
               <time dateTime={s.selectedAt!}>
                 {hongKongTime(s.selectedAt!)}（香港時間）
               </time>
             </p>
-            <p className="history-outcome">{outcomeLabels[s.outcome.status]}</p>
-            {s.outcome.status === "VISITED_OTHER" && (
-              <p>
-                {s.outcome.actualPlaceId
-                  ? "實際餐廳編號：" + s.outcome.actualPlaceId
-                  : "未有記錄實際餐廳。"}
-              </p>
-            )}
+            {s.outcome.status === "PENDING" && <>
+              <button className="primary" aria-expanded={confirming} onClick={() => setConfirming(v => !v)}>確認到訪</button>
+              {confirming && <OutcomeForm uid={uid} session={s} onSaved={() => setConfirming(false)} />}
+            </>}
             {s.outcome.confirmedAt && (
               <p>確認時間：{hongKongTime(s.outcome.confirmedAt)}（香港時間）</p>
             )}
@@ -118,14 +128,10 @@ export function HistoryCard({
                 （香港時間）之後另一次開啟。你仍可以喺歷史自行確認。
               </p>
             )}
-            <details className="history-outcome-editor">
-              <summary>
-                {s.outcome.status === "PENDING"
-                  ? "確認用餐結果"
-                  : "更正用餐結果"}
-              </summary>
+            {s.outcome.status !== "PENDING" && <details className="history-outcome-editor">
+              <summary>更正用餐結果</summary>
               <OutcomeForm uid={uid} session={s} />
-            </details>
+            </details>}
             <section aria-label="目前餐廳資料">
               <h3>目前餐廳資料</h3>
               <p className="hint">名稱、相片及營業狀態會更新，唔係當日快照。</p>
@@ -233,6 +239,7 @@ export function HistoryCard({
           <>
             <h2>當時點樣揀</h2>
             <p>以下係當時儲存嘅問題及答案；翻卡唔會更改選擇。</p>
+            {s.context.diningIntent && <p>今次想食：{s.context.diningIntent === "meal" ? "正餐" : s.context.diningIntent === "snack" ? "小食" : "都得"}</p>}
             <ol className="history-trail">
               {s.questions.map((q) => {
                 const answer = s.answers.find(
@@ -306,10 +313,12 @@ export function HistoryCard({
                 </p>
               )}
             <h3>原本餐廳排序</h3>
+            <p className="hint">顯示目前餐廳名稱，排序保留當時記錄。</p>
+            {rankError && <p role="status">{rankError}</p>}
             <ol>
               {s.decision.candidates.map((c) => (
                 <li className="history-id" key={c.placeId}>
-                  {c.placeId}
+                  {rankedCards.find(card => card.placeId === c.placeId)?.name ?? (card?.placeId === c.placeId ? card.name : null) ?? "名稱暫時未能讀取"}
                   {c.placeId === s.decision.recommendedPlaceId
                     ? " · 首選推薦"
                     : ""}
@@ -318,6 +327,9 @@ export function HistoryCard({
                 </li>
               ))}
             </ol>
+            {rankedCards.some(card => card.source === "google-places") && <div className="places-attribution"><span translate="no">Google Maps</span>
+              {rankedCards.flatMap(card => card.attributions).map((a, i) => <p key={i}>{a.uri ? <a href={a.uri} target="_blank" rel="noopener noreferrer">{a.name}</a> : a.name}</p>)}
+            </div>}
             <p>{s.decision.reason}</p>
             <p>
               排序方式：

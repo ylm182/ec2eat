@@ -37,6 +37,10 @@ const absent: ContextDependencies = {
   },
 };
 afterEach(() => vi.useRealTimers());
+it.each(["meal", "snack", "any"] as const)("preserves explicit dining intent %s in context", async diningIntent => {
+  const context = await collectContext("u", { requestId: "intent-test", launchId: "launch", area: "中環", diningIntent }, absent, now);
+  expect(context.diningIntent).toBe(diningIntent);
+});
 describe("M4 context boundaries", () => {
   it("retains explicit search scope without retaining GPS coordinates", async () => {
     for (const searchRadiusM of [3000, 10000] as const) {

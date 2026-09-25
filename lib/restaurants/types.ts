@@ -49,6 +49,7 @@ export interface RestaurantProvider {
     location: Coordinates,
     radiusM: number,
     signal: AbortSignal,
+    restaurantOnly?: boolean,
   ): Promise<SearchPlace[]>;
   details(
     id: string,

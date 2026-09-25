@@ -322,3 +322,33 @@ it("reads provider types without adding reviews or names to search payloads", as
   expect(JSON.stringify(init.headers)).toContain("primaryType");
   expect(JSON.stringify(init.headers)).not.toMatch(/reviews|displayName/);
 });
+
+
+it.each(["meal", "snack"] as const)("scopes all Google retrieval to explicit %s intent within the selected radius", async intent => {
+  const session = sessionFixture();
+  session.context.diningIntent = intent;
+  const provider = syntheticPlaces("results");
+  const nearby = vi.spyOn(provider, "nearby");
+  const text = vi.spyOn(provider, "text");
+  await searchRestaurants(session, centre, 10000, provider, vi.fn(), signal());
+  expect(nearby).not.toHaveBeenCalled();
+  expect(text).toHaveBeenCalledTimes(7);
+  for (const [query, location, radius] of text.mock.calls) {
+    expect(location).toEqual(centre);
+    expect(radius).toBe(10000);
+    if (intent === "meal") expect(query).toContain("正餐");
+    else expect(query).toMatch(/小食|甜品|麵包糕點/);
+  }
+});
+
+
+it("snack search permits food venues outside the restaurant type, while ordinary search keeps its restriction", async () => {
+  const transport = vi.fn(async (_url: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify({ places: [] })));
+  const provider = new GooglePlacesProvider("test", false, transport);
+  await provider.text("小食", centre, 3000, signal(), false);
+  const snack = JSON.parse(transport.mock.calls[0][1]!.body as string);
+  expect(snack.textQuery).toBe("小食");
+  expect(snack.includedType).toBeUndefined();
+  await provider.text("正餐 餐廳", centre, 3000, signal());
+  expect(JSON.parse(transport.mock.calls[1][1]!.body as string).includedType).toBe("restaurant");
+});

@@ -15,9 +15,8 @@ export default function RootLayout({
         <div className="shell">
           <header>
             <Link className="brand" href="/" aria-label="ec2eat 主頁">
-              ec2eat<span className="brand-dot">●</span>
+              ec2eat<span className="brand-tagline"> | 今日，食咩好</span>
             </Link>
-            <span className="header-note">少啲諗，多啲滋味。</span>
           </header>
           <main>{children}</main>
           <footer>

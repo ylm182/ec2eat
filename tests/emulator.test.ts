@@ -1111,6 +1111,12 @@ describe("M7 selected-session history", () => {
       (await restaurants.cards("saved", true)).cards.map((c) => c.placeId),
     ).toEqual(["synthetic-2"]);
     expect(ids).toEqual(["synthetic-2"]);
+    const photos: (boolean | undefined)[] = [];
+    provider.details = async (...args) => { photos.push(args[2]); return details(...args); };
+    const ranking = await restaurants.cards("saved", "ranking");
+    expect(ranking.cards.map(c => c.placeId)).toEqual(["synthetic-0", "synthetic-2"]);
+    expect(ranking.cards.every(c => c.name)).toBe(true);
+    expect(photos).toEqual([false, false]);
     provider.details = async () => {
       throw new Error("unavailable");
     };
@@ -1123,6 +1129,9 @@ describe("M7 selected-session history", () => {
     expect(history.decision).toEqual(s.decision);
     expect((await path.get()).data()).toEqual(before);
     await seed(db, user.uid, "unfinished", false);
+    await expect(restaurants.cards("unfinished", "ranking")).rejects.toMatchObject({
+      status: 404,
+    });
     await expect(restaurants.cards("unfinished", true)).rejects.toMatchObject({
       status: 404,
     });

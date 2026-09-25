@@ -798,3 +798,5 @@ main:has(.live-decision) { display:flex; flex-direction:column; }
 .restaurant-map-canvas { flex:1; min-height:0; border-radius:20px; overflow:hidden; }
 .map-status { font-size:12px; margin:6px 0; }
 .map-loading,.map-message { position:absolute; inset:0 0 28px; display:flex; align-items:center; justify-content:center; flex-direction:column; background:#fff8edee; border-radius:20px; padding:20px; }
+
+.brand-tagline { font-size:14px; font-weight:500; white-space:nowrap; }

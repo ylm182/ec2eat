@@ -260,3 +260,10 @@ MVP release requires real external smoke tests, not only fixture success. Unveri
 ## Owner-approved restaurant-ranking update — 25 September 2026
 
 The accepted larger-pool flow supersedes the earlier restaurant-only candidate/result and call-count limits: up to 50 unique in-radius candidates from popular nearby and bounded food/cuisine searches, at most six Laya tournament passes of ten or fewer candidates, and up to ten displayed recommendations. Weights from different batches are never compared. Any failed pass uses deterministic ranking over the whole pool. Restaurant ranking has a 20-second budget within 25-second retrieval/ranking; question inference and three-to-six adaptive answers are unchanged. See [TOP_TEN_RANKING.md](docs/TOP_TEN_RANKING.md) for defaults, cost, approximation limits and verification.
+
+
+## Owner-approved update — 25 September 2026: compact UI and dining intent
+
+New decisions ask 正餐 (left) / 小食 (right) before radius selection. Up remains neutral (都得). This explicit pre-search choice is persisted as optional `context.diningIntent` (`meal`, `snack`, `any`), separate from the eleven adaptive dimensions and six-question limit. Older sessions omit it and retain existing retrieval. New explicit meal/snack choices scope all seven Text Search calls: meal queries include 正餐; snack queries cover 小食/港式小食/街頭小食/甜品/麵包糕點/日式小食/台式小食. This is retrieval relevance, not proof of menu contents. Radius validation and bounded 50-candidate/10-result ranking remain.
+
+Header becomes ec2eat | 今日，食咩好. Home/result large headings, results reason/area, reload and restart buttons are removed as requested; home remains reachable through the brand link. History hides raw IDs, offers 確認到訪 for pending outcomes, and retains correction access. Four-hour/next-opening eligibility is unchanged. Flipping history loads current restaurant names in original saved order through an authenticated owner-scoped route, without photos or persistence. Missing names are labelled unavailable rather than replaced by IDs. Front history still fetches only the selected restaurant.

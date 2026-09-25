@@ -62,11 +62,19 @@ export async function searchRestaurants(
   ).slice(0, 2);
   // Queries reflect preferences even in dense areas. Query results are retrieval
   // evidence only: never turn the searched-for dish into a restaurant attribute.
-  const queries = [...new Set([...top.map(c => archetypes.find(a => a.id === c.id)!.label + " 餐廳"), "中菜 餐廳", "日本料理 餐廳", "韓國料理 餐廳", "泰國料理 餐廳"])];
-  const batches = await Promise.allSettled([
-    bounded(4000, s => provider.nearby(centre, radius, s), signal),
-    ...queries.map(q => bounded(2500, s => provider.text(q, centre, radius, s), signal)),
-  ]);
+  const intent = session.context.diningIntent;
+  const queries = intent === "snack"
+    ? ["小食", "港式小食", "街頭小食", "甜品", "麵包糕點", "日式小食", "台式小食"]
+    : [...new Set([...top.map(c => archetypes.find(a => a.id === c.id)!.label + " 餐廳"), "中菜 餐廳", "日本料理 餐廳", "韓國料理 餐廳", "泰國料理 餐廳"])];
+  // An explicit intent scopes every retrieval call, including the broad pool.
+  // Search relevance is not proof of a restaurant's menu or a strict cuisine filter.
+  const batches = await Promise.allSettled(
+    intent === "snack" || intent === "meal"
+      ? (intent === "snack" ? queries : ["正餐 餐廳", ...queries.map(q => "正餐 " + q)])
+          .map(q => bounded(2500, s => provider.text(q, centre, radius, s, intent !== "snack"), signal))
+      : [bounded(4000, s => provider.nearby(centre, radius, s), signal),
+          ...queries.map(q => bounded(2500, s => provider.text(q, centre, radius, s), signal))],
+  );
   signal.throwIfAborted();
   const pools = batches.map(b => b.status === "fulfilled" ? eligible(b.value, centre, radius, true) : []);
   // Interleave targeted pools and nearby results so close generic results

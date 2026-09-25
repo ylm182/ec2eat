@@ -204,8 +204,7 @@ export function RestaurantResults({
         </>
       ) : (
         <>
-          <h2>{selected ? "已儲存你的選擇" : "揀間啱心水嘅"}</h2>
-          <p>{session.decision.reason}</p>
+          {selected && <h2>已儲存你的選擇</h2>}
           {cards.length === 1 && <p>目前只搵到一間可用餐廳。</p>}
           {!cards.length && !detailsLoading && <p>暫時未有餐廳資料。</p>}
           <div className="results-tabs" aria-label="顯示方式">
@@ -321,18 +320,7 @@ export function RestaurantResults({
               </article>
             ))}
           </div>}
-          <button
-            className="text-button"
-            disabled={busy}
-            onClick={() => {
-              setError("");
-              void load().catch((e) =>
-                setError(e instanceof Error ? e.message : "資料暫時不可用。"),
-              );
-            }}
-          >
-            重新載入目前餐廳資料
-          </button>
+
           {selected && (
             <div className="hint">
               <p>選擇已儲存，未代表已到訪。之後再次開啟先確認用餐結果。</p>

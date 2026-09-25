@@ -126,6 +126,7 @@ export const contextSchema = z
     timezone: z.literal("Asia/Hong_Kong"),
     meal: z.enum(["lunch", "dinner", "other"]),
     area: text,
+    diningIntent: z.enum(["meal", "snack", "any"]).optional(),
     searchRadiusM: z.union([z.literal(3000), z.literal(10000)]).optional(),
     locationSource: z.enum(["gps", "manual"]),
     weather: z
@@ -369,6 +370,7 @@ export const createSessionInput = z
     requestId: idSchema,
     launchId: idSchema,
     area: text.optional(),
+    diningIntent: z.enum(["meal", "snack", "any"]).optional(),
     searchRadiusM: z.union([z.literal(3000), z.literal(10000)]).optional(),
     location: z
       .object({
