@@ -5,7 +5,9 @@ import type { DecisionInput } from "../providers/contracts";
 
 export const LAYA_REVISION = "e4e9ddf21a7b1903b7acffd8814ad4307bf63a67";
 export const LAYA_RUNTIME = "laya==0.3.20";
-export const LAYA_WRAPPER_REVISION = "1942f86f6f828e850a0e963bec0daf8c225e4113";
+// Deployed wrapper verified by both choice and independent-score HF fixtures.
+export const LAYA_WRAPPER_REVISION = "8ba5b2a0e62e0d7c83599a7eeddf087203c7cb14";
+export const LAYA_SCORE_FIXTURE_SHA256 = "983be4b846083671e4d51720b944db6ec4c06938a5f7c2c9ad843b5782e34992";
 // High-value meanings follow domain/catalog.ts, including reversed swipe polarities.
 const high: Record<Dimension, string> = {
   richness: "rich", spiciness: "spicy", novelty: "novel", speed: "fast",
@@ -46,7 +48,7 @@ export function encodeLaya(input: DecisionInput) {
     // Weak, minimized boolean context only; never raw Calendar/weather provider text.
     `Weak context: rain=${input.context.rain ?? "unknown"}, nextEventSoon=${input.context.nextEventSoon ?? "unknown"}.`,
   ].join("\n");
-  return {path: "/", body: {inputs: {state, candidates: input.candidates.map(c => ({
+  return {path: "/", body: {inputs: {...(input.stage === "restaurant" ? {mode: "score"} : {}), state, candidates: input.candidates.map(c => ({
     id: c.id,
     description: [
       ...(c.cuisines?.length ? [`cuisine=${c.cuisines.join("/")}`] : []),
@@ -59,7 +61,7 @@ export function encodeLaya(input: DecisionInput) {
   }))}}};
 }
 const responseSchema = z.object({
-  contract: z.literal("ec2eat-laya-choice-v1"),
+  contract: z.enum(["ec2eat-laya-choice-v1", "ec2eat-laya-score-v1"]),
   model: z.literal("convaiinnovations/laya-multilingual"),
   modelRevision: z.literal(LAYA_REVISION), runtimeVersion: z.literal(LAYA_RUNTIME),
   entries: z.array(z.object({id:z.string(), score:z.number().finite().min(0).max(1),
@@ -71,8 +73,10 @@ export const installedRecipe: VerifiedLayaRecipe = {
   runtimeVersion: LAYA_RUNTIME,
   fixtureSha256: "7f7197270894d6acab6b844def6f7170d2d64a5214e8c347e2ded0edc721220c",
   encode: encodeLaya,
-  decode(raw) {
-    const {entries, confidence} = responseSchema.parse(raw);
+  decode(raw, input) {
+    const {entries, confidence, contract} = responseSchema.parse(raw);
+    const expected = input?.stage === "restaurant" ? "ec2eat-laya-score-v1" : "ec2eat-laya-choice-v1";
+    if (contract !== expected) throw new LayaFailure("laya_contract_mismatch");
     return {entries, confidence};
   },
 };

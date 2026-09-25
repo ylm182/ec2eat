@@ -271,3 +271,29 @@ Header becomes ec2eat | 今日，食咩好. Home/result large headings, results 
 
 ### Owner update: immediate History confirmation
 Explicit History confirmation/correction and actual-restaurant lookup are available immediately after selection, including the selecting opening. This supersedes the previous manual four-hour/opening gate. Automatic reminders retain the four-hour/later-opening gate and only target PENDING outcomes. A confirmed outcome never needs a second confirmation after four hours. Authentication, ownership, revisions and idempotency remain enforced.
+
+
+## Accepted independent-score amendment (25 September 2026)
+
+Restaurant ranking now evaluates every candidate independently with Laya's `score`
+head on a fixed five-level suitability rubric, maps 0–4 to 0–1, and takes the global
+top ten. Batches of ten are transport only: no tournament quotas or final round.
+Question archetype selection retains `choice`. Any batch failure uses whole-pool
+deterministic fallback, with batch/root reason recorded. Initial budgets become
+30s per batch, 120s pool, 125s retrieval/ranking and 150s search lease. These are
+upper bounds, not an SLA (one warm developer-Mac 50-candidate run took 33.38s). Existing evidence
+fields and privacy gates remain; Gemini summaries/reviews are not yet added.
+This supersedes earlier restaurant tournament and timeout text. Implementation and
+local and remote verification are complete; HF wrapper commit is
+`8ba5b2a0e62e0d7c83599a7eeddf087203c7cb14`. See
+[LAYA_SCORE_RANKING.md](docs/LAYA_SCORE_RANKING.md) for verification and rollout steps.
+
+
+### Candidate cap adjustment (25 September 2026)
+
+The owner reduced the restaurant candidate pool from 50 to 20. Retrieval still
+interleaves/deduplicates the existing Google search pools within the selected
+radius, but retains at most twenty for two batches of independent Laya scoring.
+The global top ten are displayed. Query count and timeout ceilings are unchanged;
+this reduces inference work, not the number of Google search API requests.
+See docs/LAYA_SCORE_RANKING.md for the measured 20-candidate run.

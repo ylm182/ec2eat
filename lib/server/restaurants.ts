@@ -144,7 +144,7 @@ export function restaurantRepository(
           hash: digest,
           sessionId: id,
           owner,
-          leaseUntil: Timestamp.fromMillis(Date.now() + 30000),
+          leaseUntil: Timestamp.fromMillis(Date.now() + 150000),
           expiresAt: Timestamp.fromMillis(Date.now() + 7 * 86400000),
         });
         return null;
@@ -162,7 +162,7 @@ export function restaurantRepository(
             ? 5000
             : 10000
           : (stopped.search?.radiusM ?? base);
-        const found = await bounded(25000, (signal) =>
+        const found = await bounded(125000, (signal) =>
           searchRestaurants(
             stopped,
             centre.location,

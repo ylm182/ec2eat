@@ -1,7 +1,7 @@
 // Explicit live smoke only. Secrets and Google content stay in memory; print counts/timings only.
 import { execFileSync } from "node:child_process";
 import { GooglePlacesProvider } from "../lib/providers/google-places";
-import { searchRestaurants } from "../lib/restaurants/search";
+import { searchRestaurants, RESTAURANT_POOL_LIMIT } from "../lib/restaurants/search";
 import { newSession } from "../lib/domain/session";
 import { unknownPreferences } from "../lib/domain/schema";
 import { HuggingFaceLayaProvider } from "../lib/laya/provider";
@@ -16,7 +16,7 @@ async function main() {
   preferences.distanceTolerance = {state:"answered",value:.2,strength:1};
   const warm: DecisionInput = {version:1,stage:"restaurant",preferences,priors:{},context:{rain:null,nextEventSoon:null},candidates:Array.from({length:10},(_,i)=>({id:`synthetic-${i}`,categoryId:i%2?"noodles":"salad",features:{price:{value:i/10,confidence:1,source:"rule"},distanceTolerance:{value:i/10,confidence:1,source:"rule"}}}))};
   const hf = new HuggingFaceLayaProvider("https://6ab54d3c9ec415b652acb0c3.endpoints.huggingface.cloud/",secret("HF_TOKEN","1"),installedRecipe,warm);
-  const synthetic = await hf.rank(warm,AbortSignal.timeout(15000));
+  const synthetic = await hf.rank(warm,AbortSignal.timeout(45000));
   console.log(JSON.stringify({case:"synthetic-ten-candidate-contract",provider:synthetic.provider,count:synthetic.entries.length,latencyMs:synthetic.latencyMs}));
   const service = new LayaService(hf,{circuitOpen:async()=>false,record:async()=>{},acquire:async()=>true,release:async()=>{}});
   const session = newSession({id:"smoke",uid:"synthetic-smoke-user",launchId:"smoke",area:"中環",now:new Date().toISOString(),preferences});
@@ -27,8 +27,10 @@ async function main() {
     const scored = await service.rank(input, signal);
     console.log(JSON.stringify({case:"ranking-pass",pass:rankCalls,count:input.candidates.length,provider:scored.provider,fallbackReason:scored.fallbackReason,latencyMs:scored.latencyMs}));
     return scored;
-  },AbortSignal.timeout(30000));
+  },AbortSignal.timeout(125000));
   console.log(JSON.stringify({case:"google-to-laya",poolSize:result.poolSize,candidateCount:seen.size,categoryCount:categorized.size,rankCalls,shortlistCount:result.candidates.length,provider:result.result.provider,fallbackReason:result.result.fallbackReason,latencyMs:result.result.latencyMs}));
+  if(seen.size > RESTAURANT_POOL_LIMIT || rankCalls !== Math.ceil(seen.size/10)) throw Error("Candidate cap or batch count violated");
   if(!seen.size) throw Error("No eligible live candidates; ranking unverified");
+  if(result.result.provider!=="laya" || result.result.fallbackReason || result.result.entries.length!==seen.size) throw Error("Independent model scoring incomplete or fell back");
 }
 main().catch(() => { console.error("Live ranking smoke failed (provider payloads omitted)"); process.exitCode=1; });

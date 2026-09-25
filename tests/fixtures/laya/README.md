@@ -42,3 +42,22 @@ forced scale-to-zero, initial authenticated HTTP 503, then four successful HTTP
 Warm calls took 1.27–1.42 seconds from the developer Mac. Exact cold-start duration
 and automatic idle scale-down were not measured. This verifies one private-repo
 wake-up, not the Taiwan timeout or scheduled warm-up gates.
+
+
+## Independent score preparation — 25 September 2026
+
+`local-score-smoke.json` is real local macOS CPU inference, not HF endpoint evidence.
+Five cases verify score order/batch invariance and legacy choice compatibility.
+The current HF fixture digest still verifies choice only. Score rollout is pending
+handler upload and remote validation; see `docs/LAYA_SCORE_RANKING.md`.
+
+
+## HF independent-score verification — 25 September 2026
+
+`hf-score-smoke.json` contains real remote responses at wrapper commit
+8ba5b2a0e62e0d7c83599a7eeddf087203c7cb14. Five cases verify Chinese preferences,
+independent scores unchanged across reversed order/alone/ten candidates, and
+legacy choice compatibility. The app binds the fixture SHA-256 separately from
+the existing choice fixture. A subsequent Google-to-Laya test scored fifty real
+candidates in five batches with no fallback (33.38s from the developer Mac).
+No actual Google restaurant content is included in either synthetic fixture.

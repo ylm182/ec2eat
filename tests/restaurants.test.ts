@@ -203,7 +203,7 @@ it("invalid model IDs cannot enter the shortlist and supplemental failure preser
   );
   expect(result.candidates.map((c) => c.placeId)).toEqual(["synthetic-0"]);
   expect(result.result.provider).toBe("heuristic");
-  expect(result.result.fallbackReason).toBe("laya_tournament_fallback");
+  expect(result.result.fallbackReason).toBe("laya_score_fallback:batch_1:laya_invalid_output");
 });
 
 it("photo media is displayed only with a safe URL and its supplied author attribution", async () => {
@@ -251,7 +251,7 @@ it("photo media is displayed only with a safe URL and its supplied author attrib
  });
 
 
-it("keeps targeted candidates in a dense nearby set and caps the candidate pool at fifty", async () => {
+it("keeps targeted candidates in a dense nearby set and caps the candidate pool at twenty", async () => {
   const p = syntheticPlaces("results"); p.modelInputAllowed = true;
   const base = (await p.nearby(centre, 3000, signal()))[0];
   p.nearby = async () => Array.from({length:20}, (_, i) => ({...base, placeId:`near-${i}`, location:centre}));
@@ -266,7 +266,8 @@ it("keeps targeted candidates in a dense nearby set and caps the candidate pool 
   expect(queries).toHaveLength(6);
   const candidates = rank.mock.calls[0][0].candidates;
   expect(candidates).toHaveLength(10);
-  expect(new Set(rank.mock.calls.slice(0,5).flatMap(call=>call[0].candidates.map((c:{id:string})=>c.id))).size).toBe(50);
+  expect(new Set(rank.mock.calls.flatMap(call=>call[0].candidates.map((c:{id:string})=>c.id))).size).toBe(20);
+  expect(rank).toHaveBeenCalledTimes(2);
   expect(new Set(candidates.map((c: {id:string}) => c.id)).size).toBe(10);
   expect(candidates.some((c: {id:string}) => c.id.startsWith("target-"))).toBe(true);
   expect(rank.mock.calls.flatMap(call => call[0].candidates).some((c: {id:string}) => c.id.startsWith("near-"))).toBe(true);

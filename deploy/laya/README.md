@@ -116,3 +116,20 @@ four real model smoke cases passed. `check_runtime.py` makes the import check
 repeatable. This remains macOS/Python 3.12 evidence, not a full Linux HF image test.
 Upload only the corrected requirements.txt, then pin the new wrapper commit on
 an endpoint update. No handler, model revision, hardware or Firebase change needed.
+
+
+### Independent score handler update (25 September 2026)
+
+Restaurant requests add `inputs.mode: "score"`. Every candidate is evaluated alone
+using the same five-level rubric; SDK scores 0–4 are mapped to 0–1 and returned
+with contract `ec2eat-laya-score-v1`. They are suitability scores, not enjoyment
+probabilities. The 700-token state limit applies to each restaurant separately.
+Legacy requests without a mode keep the `choice` behavior for swipe questions.
+
+Eight handler tests and real local order/batch-invariance tests pass. Run
+`python smoke_score.py --output /tmp/score.json` locally or add `--remote` with
+HF_TOKEN and LAYA_BASE_URL supplied securely. Upload only handler.py; do not change
+the proven requirements. Remote score validation passed on wrapper commit
+8ba5b2a0e62e0d7c83599a7eeddf087203c7cb14 (including batch/order invariance).
+App restaurant budgets are now 30s/batch and 120s/pool; question budget remains
+1.75s. See docs/LAYA_SCORE_RANKING.md in the application repository.

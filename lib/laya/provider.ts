@@ -19,7 +19,7 @@ export interface VerifiedLayaRecipe {
   readonly runtimeVersion: string;
   readonly fixtureSha256: string;
   encode(input: DecisionInput): { path: string; body: unknown };
-  decode(response: unknown): unknown;
+  decode(response: unknown, input?: DecisionInput): unknown;
 }
 const resultSchema = z
   .object({
@@ -127,7 +127,7 @@ export class HuggingFaceLayaProvider implements DecisionProvider {
       const text = await response.text();
       if (text.length > 65536) throw new Error("large");
       const decoded = validateRanking(
-        this.recipe.decode(JSON.parse(text)),
+        this.recipe.decode(JSON.parse(text), input),
         input,
       );
       return {

@@ -1,0 +1,262 @@
+{
+  "execution": "remote",
+  "cases": [
+    {
+      "name": "pair",
+      "request": {
+        "inputs": {
+          "mode": "score",
+          "state": "我想食平價、清淡、快啲食完嘅午餐。",
+          "candidates": [
+            {
+              "id": "quick",
+              "description": "平價，清淡，快速上菜。"
+            },
+            {
+              "id": "formal",
+              "description": "昂貴正式晚餐，辣味，需要長時間用餐。"
+            }
+          ]
+        }
+      },
+      "response": {
+        "contract": "ec2eat-laya-score-v1",
+        "model": "convaiinnovations/laya-multilingual",
+        "modelRevision": "e4e9ddf21a7b1903b7acffd8814ad4307bf63a67",
+        "runtimeVersion": "laya==0.3.20",
+        "entries": [
+          {
+            "id": "quick",
+            "score": 0.77835,
+            "weight": 0.5882775300430807
+          },
+          {
+            "id": "formal",
+            "score": 0.54475,
+            "weight": 0.41172246995691936
+          }
+        ],
+        "confidence": null
+      },
+      "seconds": 1.7619692910011509
+    },
+    {
+      "name": "reverse",
+      "request": {
+        "inputs": {
+          "mode": "score",
+          "state": "我想食平價、清淡、快啲食完嘅午餐。",
+          "candidates": [
+            {
+              "id": "formal",
+              "description": "昂貴正式晚餐，辣味，需要長時間用餐。"
+            },
+            {
+              "id": "quick",
+              "description": "平價，清淡，快速上菜。"
+            }
+          ]
+        }
+      },
+      "response": {
+        "contract": "ec2eat-laya-score-v1",
+        "model": "convaiinnovations/laya-multilingual",
+        "modelRevision": "e4e9ddf21a7b1903b7acffd8814ad4307bf63a67",
+        "runtimeVersion": "laya==0.3.20",
+        "entries": [
+          {
+            "id": "formal",
+            "score": 0.54475,
+            "weight": 0.41172246995691936
+          },
+          {
+            "id": "quick",
+            "score": 0.77835,
+            "weight": 0.5882775300430807
+          }
+        ],
+        "confidence": null
+      },
+      "seconds": 1.7996498749998864
+    },
+    {
+      "name": "alone",
+      "request": {
+        "inputs": {
+          "mode": "score",
+          "state": "我想食平價、清淡、快啲食完嘅午餐。",
+          "candidates": [
+            {
+              "id": "quick",
+              "description": "平價，清淡，快速上菜。"
+            }
+          ]
+        }
+      },
+      "response": {
+        "contract": "ec2eat-laya-score-v1",
+        "model": "convaiinnovations/laya-multilingual",
+        "modelRevision": "e4e9ddf21a7b1903b7acffd8814ad4307bf63a67",
+        "runtimeVersion": "laya==0.3.20",
+        "entries": [
+          {
+            "id": "quick",
+            "score": 0.77835,
+            "weight": 1.0
+          }
+        ],
+        "confidence": null
+      },
+      "seconds": 1.6076465000005555
+    },
+    {
+      "name": "ten",
+      "request": {
+        "inputs": {
+          "mode": "score",
+          "state": "我想食平價、清淡、快啲食完嘅午餐。",
+          "candidates": [
+            {
+              "id": "synthetic_0",
+              "description": "平價，清淡，快速上菜。"
+            },
+            {
+              "id": "synthetic_1",
+              "description": "昂貴正式晚餐，辣味，需要長時間用餐。"
+            },
+            {
+              "id": "synthetic_2",
+              "description": "平價，清淡，快速上菜。"
+            },
+            {
+              "id": "synthetic_3",
+              "description": "昂貴正式晚餐，辣味，需要長時間用餐。"
+            },
+            {
+              "id": "synthetic_4",
+              "description": "平價，清淡，快速上菜。"
+            },
+            {
+              "id": "synthetic_5",
+              "description": "昂貴正式晚餐，辣味，需要長時間用餐。"
+            },
+            {
+              "id": "synthetic_6",
+              "description": "平價，清淡，快速上菜。"
+            },
+            {
+              "id": "synthetic_7",
+              "description": "昂貴正式晚餐，辣味，需要長時間用餐。"
+            },
+            {
+              "id": "synthetic_8",
+              "description": "平價，清淡，快速上菜。"
+            },
+            {
+              "id": "synthetic_9",
+              "description": "昂貴正式晚餐，辣味，需要長時間用餐。"
+            }
+          ]
+        }
+      },
+      "response": {
+        "contract": "ec2eat-laya-score-v1",
+        "model": "convaiinnovations/laya-multilingual",
+        "modelRevision": "e4e9ddf21a7b1903b7acffd8814ad4307bf63a67",
+        "runtimeVersion": "laya==0.3.20",
+        "entries": [
+          {
+            "id": "synthetic_0",
+            "score": 0.77835,
+            "weight": 0.11765550600861614
+          },
+          {
+            "id": "synthetic_1",
+            "score": 0.54475,
+            "weight": 0.08234449399138388
+          },
+          {
+            "id": "synthetic_2",
+            "score": 0.77835,
+            "weight": 0.11765550600861614
+          },
+          {
+            "id": "synthetic_3",
+            "score": 0.54475,
+            "weight": 0.08234449399138388
+          },
+          {
+            "id": "synthetic_4",
+            "score": 0.77835,
+            "weight": 0.11765550600861614
+          },
+          {
+            "id": "synthetic_5",
+            "score": 0.54475,
+            "weight": 0.08234449399138388
+          },
+          {
+            "id": "synthetic_6",
+            "score": 0.77835,
+            "weight": 0.11765550600861614
+          },
+          {
+            "id": "synthetic_7",
+            "score": 0.54475,
+            "weight": 0.08234449399138388
+          },
+          {
+            "id": "synthetic_8",
+            "score": 0.77835,
+            "weight": 0.11765550600861614
+          },
+          {
+            "id": "synthetic_9",
+            "score": 0.54475,
+            "weight": 0.08234449399138388
+          }
+        ],
+        "confidence": null
+      },
+      "seconds": 4.542140375000599
+    },
+    {
+      "name": "legacy-choice",
+      "request": {
+        "inputs": {
+          "state": "我想食平價、清淡、快啲食完嘅午餐。",
+          "candidates": [
+            {
+              "id": "quick",
+              "description": "平價，清淡，快速上菜。"
+            },
+            {
+              "id": "formal",
+              "description": "昂貴正式晚餐，辣味，需要長時間用餐。"
+            }
+          ]
+        }
+      },
+      "response": {
+        "contract": "ec2eat-laya-choice-v1",
+        "model": "convaiinnovations/laya-multilingual",
+        "modelRevision": "e4e9ddf21a7b1903b7acffd8814ad4307bf63a67",
+        "runtimeVersion": "laya==0.3.20",
+        "entries": [
+          {
+            "id": "quick",
+            "score": 0.7423,
+            "weight": 0.7423
+          },
+          {
+            "id": "formal",
+            "score": 0.2577,
+            "weight": 0.2577
+          }
+        ],
+        "confidence": null
+      },
+      "seconds": 1.4415170420033974
+    }
+  ]
+}

@@ -59,7 +59,7 @@ export class LayaService {
     let reason = this.unavailable;
     if (this.provider) {
       try {
-        const result = await deadline(input.stage === "restaurant" ? 3000 : 1750, async (signal) => {
+        const result = await deadline(input.stage === "restaurant" ? 30000 : 1750, async (signal) => {
           if (await this.store.circuitOpen(Date.now()))
             throw new LayaFailure("laya_circuit_open");
           signal.throwIfAborted();

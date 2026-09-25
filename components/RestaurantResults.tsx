@@ -1,6 +1,7 @@
 "use client";
 import { RestaurantMap } from "./RestaurantMap";
 import { Loading } from "./Loading";
+import { RestaurantLoading } from "./RestaurantLoading";
 import { currentLaunchId } from "@/lib/client/launch";
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
@@ -38,6 +39,7 @@ export function RestaurantResults({
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [cards, setCards] = useState<RestaurantCard[]>([]);
   const [busy, setBusy] = useState(false);
+  const [searching, setSearching] = useState(false);
   const [error, setError] = useState("");
   const mounted = useRef(true);
   useEffect(() => {
@@ -96,6 +98,7 @@ export function RestaurantResults({
     if (locked.current) return;
     locked.current = true;
     setBusy(true);
+    setSearching(true);
     setError("");
     const { session: current, location: coords } = callbacks.current;
     const body = pending.current ?? {
@@ -127,6 +130,7 @@ export function RestaurantResults({
     } finally {
       locked.current = false;
       setBusy(false);
+      setSearching(false);
     }
   }
   useEffect(() => {
@@ -177,7 +181,7 @@ export function RestaurantResults({
   const empty = session.search?.result === "empty";
   return (
     <section aria-label="餐廳選擇" className="restaurant-results">
-      {(busy || detailsLoading) && <Loading label="搵緊好嘢食" />}
+      {(searching || detailsLoading) ? <RestaurantLoading phase={searching ? "search" : "details"} /> : busy ? <Loading label="儲存中" /> : null}
       {error && <p role="alert">{error}</p>}
       {session.status === "RECOMMENDING" ? (
         <>

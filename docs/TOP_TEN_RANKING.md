@@ -1,5 +1,8 @@
 # Up to 50 candidates, up to 10 recommendations
 
+> The tournament below describes the previously deployed flow. The new independent
+> score implementation supersedes ranking and budgets; see [LAYA_SCORE_RANKING.md](LAYA_SCORE_RANKING.md). HF score handler and real 50-candidate flow are verified; see that document for rollout status.
+
 25 September 2026. Implements the owner's accepted larger-pool recommendation. Supersedes the earlier ten-candidate/three-result restaurant flow; swipe questions and their limits remain unchanged.
 
 ## Retrieval

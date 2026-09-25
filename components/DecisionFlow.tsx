@@ -5,6 +5,7 @@ import { currentLaunchId } from "@/lib/client/launch";
 import { RestaurantResults } from "./RestaurantResults";
 import { EntrySwipe } from "./EntrySwipe";
 import { Loading } from "./Loading";
+import { RestaurantLoading } from "./RestaurantLoading";
 import { resolveLocation } from "@/lib/context/location";
 import { Account } from "./Account";
 import {
@@ -80,6 +81,7 @@ function AuthenticatedDecision({ uid }: { uid: string }) {
   }
 
   const [busy, setBusy] = useState(false);
+  const [recommending, setRecommending] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const locked = useRef(false);
@@ -211,6 +213,7 @@ function AuthenticatedDecision({ uid }: { uid: string }) {
   }
   async function showOptions() {
     if (!session || locked.current) return;
+    setRecommending(true);
     locked.current = true;
     setBusy(true);
     setError("");
@@ -240,6 +243,8 @@ function AuthenticatedDecision({ uid }: { uid: string }) {
       stopRequest.current = null;
     } catch (e) {
       setError(e instanceof Error ? e.message : text.error);
+    } finally {
+      setRecommending(false);
     }
   }
   async function recover() {
@@ -261,6 +266,7 @@ function AuthenticatedDecision({ uid }: { uid: string }) {
   const question = session?.questions.at(-1);
   return (
     <section className="live-decision">
+      {recommending && <RestaurantLoading />}
       {error && <p role="alert">{error}</p>}
       {recoverId && !session ? (
         <div>

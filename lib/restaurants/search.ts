@@ -11,6 +11,7 @@ import type {
 } from "../providers/contracts";
 import { HeuristicDecisionProvider } from "../providers/heuristic";
 import { selectable, type SearchPlace, type RestaurantProvider } from "./types";
+export const RESTAURANT_POOL_LIMIT = 20;
 export function distanceM(a: Coordinates, b: Coordinates) {
   const rad = Math.PI / 180;
   const dLat = (b.latitude - a.latitude) * rad,
@@ -40,7 +41,7 @@ export function eligible(
         preserveOrder ? 0 : distanceM(centre, a.location!) - distanceM(centre, b.location!) ||
         a.placeId.localeCompare(b.placeId),
     )
-    .slice(0, 50);
+    .slice(0, RESTAURANT_POOL_LIMIT);
 }
 const prices: Record<string, number> = {
   PRICE_LEVEL_FREE: 0,
@@ -82,10 +83,10 @@ export async function searchRestaurants(
   const orderedPools = [...pools.slice(1), pools[0]];
   const candidates: SearchPlace[] = [];
   const seen = new Set<string>();
-  for (let i = 0; i < 20 && candidates.length < 50; i++) {
+  for (let i = 0; i < 20 && candidates.length < RESTAURANT_POOL_LIMIT; i++) {
     for (const pool of orderedPools) {
       const place = pool[i];
-      if (place && !seen.has(place.placeId) && candidates.length < 50) {
+      if (place && !seen.has(place.placeId) && candidates.length < RESTAURANT_POOL_LIMIT) {
         candidates.push(place); seen.add(place.placeId);
       }
     }
