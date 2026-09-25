@@ -50,6 +50,7 @@ export const cleanExpiredWeather = onSchedule(
   async () => {
     const { cleanWeather } = await import("./weather-cleanup");
     const removed = await cleanWeather(getFirestore());
+    await getFirestore().doc("system/weatherRetention").set({ lastSuccessAt: new Date() });
     console.info(JSON.stringify({ event: "weather_cleanup", removed }));
   },
 );

@@ -89,6 +89,10 @@ export function contextDependencies(db: Firestore): ContextDependencies {
         process.env.GOOGLE_WEATHER_PERSIST_APPROVED !== "true"
       )
         throw new ProviderFailure("absent");
+      // Fail closed if cleanup has stopped; do not accumulate new provider content.
+      const health = (await db.doc("system/weatherRetention").get()).get("lastSuccessAt");
+      const age = Date.now() - (typeof health?.toMillis === "function" ? health.toMillis() : 0);
+      if (age < 0 || age > 10 * 60 * 1000) throw new ProviderFailure("absent");
       return new GoogleWeatherProvider(
         process.env.GOOGLE_WEATHER_API_KEY,
       ).current(location, signal);

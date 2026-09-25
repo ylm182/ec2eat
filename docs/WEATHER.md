@@ -19,7 +19,7 @@ Google Maps text attribution accompanies the display. The dedicated API returns 
 
 ## Operations / tests
 
-Inspect Cloud Scheduler execution status and Cloud Function `cleanExpiredWeather` logs (`weather_cleanup`, removed count). Failure retries are enabled; investigate immediately if cleanup fails or has no successful execution within 10 minutes, disable new Weather requests until resolved. Prolonged scheduler outages can breach the deadline; read-time redaction alone does not solve physical retention. Backups/PITR that retain provider content must remain disabled or separately address this retention limit.
+Inspect Cloud Scheduler execution status and Cloud Function `cleanExpiredWeather` logs (`weather_cleanup`, removed count). A successful cleanup writes `system/weatherRetention.lastSuccessAt`; new Weather requests automatically stop when it is older than 10 minutes. Failure retries are enabled; investigate immediately if cleanup fails or has no successful execution within 10 minutes, disable new Weather requests until resolved. Prolonged scheduler outages can breach the deadline; read-time redaction alone does not solve physical retention. Backups/PITR that retain provider content must remain disabled or separately address this retention limit.
 
 Verified direct production Weather request: HTTP 200, condition and temperature fields present. Unit tests cover expiry and model-input exclusion; emulator test verifies actual removal from all three collections and preservation of a fresh record/choice/revision.
 
