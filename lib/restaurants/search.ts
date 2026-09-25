@@ -1,3 +1,4 @@
+import { restaurantEvidence } from "./evidence";
 import { bounded } from "../providers/google-context";
 import { validateRanking } from "../laya/provider";
 import { rankCandidates, categoryPreference } from "../domain/engine";
@@ -55,36 +56,34 @@ export async function searchRestaurants(
   rank: (input: DecisionInput) => Promise<DecisionResult>,
   signal: AbortSignal,
 ) {
-  let all = await bounded(
-    4000,
-    (s) => provider.nearby(centre, radius, s),
-    signal,
-  );
-  let candidates = eligible(all, centre, radius);
-  if (candidates.length < 3) {
-    const top = rankCandidates(
-      archetypes,
-      session.preferences,
-      {},
-      categoryPreference(session),
-    ).slice(0, 2);
-    for (const candidate of top) {
-      signal.throwIfAborted();
-      const label = archetypes.find((a) => a.id === candidate.id)!.label;
-      try {
-        all = all.concat(
-          await bounded(
-            2500,
-            (s) => provider.text(`${label} 餐廳`, centre, radius, s),
-            signal,
-          ),
-        );
-      } catch (error) {
-        if (!candidates.length) throw error;
+  const top = rankCandidates(
+    archetypes, session.preferences, {}, categoryPreference(session),
+  ).slice(0, 2);
+  // Queries reflect preferences even in dense areas. Query results are retrieval
+  // evidence only: never turn the searched-for dish into a restaurant attribute.
+  const queries = [...new Set(top.map(c => archetypes.find(a => a.id === c.id)!.label + " 餐廳"))];
+  const batches = await Promise.allSettled([
+    bounded(4000, s => provider.nearby(centre, radius, s), signal),
+    ...queries.map(q => bounded(2500, s => provider.text(q, centre, radius, s), signal)),
+  ]);
+  signal.throwIfAborted();
+  const pools = batches.map(b => b.status === "fulfilled" ? eligible(b.value, centre, radius) : []);
+  // Interleave targeted pools and nearby results so ten close generic results
+  // cannot crowd every preference-matched retrieval out of the scoring set.
+  const orderedPools = [...pools.slice(1), pools[0]];
+  const candidates: SearchPlace[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < 10 && candidates.length < 10; i++) {
+    for (const pool of orderedPools) {
+      const place = pool[i];
+      if (place && !seen.has(place.placeId) && candidates.length < 10) {
+        candidates.push(place); seen.add(place.placeId);
       }
-      candidates = eligible(all, centre, radius);
-      if (candidates.length >= 3) break;
     }
+  }
+  if (!candidates.length) {
+    const failure = batches.find(b => b.status === "rejected");
+    if (failure?.status === "rejected") throw failure.reason;
   }
   signal.throwIfAborted();
   const input: DecisionInput = {
@@ -92,8 +91,10 @@ export async function searchRestaurants(
     stage: "restaurant",
     candidates: candidates.map((p) => ({
       id: p.placeId,
+      ...restaurantEvidence(p),
       distanceM: distanceM(centre, p.location!),
       features: {
+        ...restaurantEvidence(p).features,
         distanceTolerance: {
           value: Math.min(1, distanceM(centre, p.location!) / radius),
           confidence: 1,
@@ -112,6 +113,7 @@ export async function searchRestaurants(
     })),
     preferences: { ...unknownPreferences(), ...session.preferences },
     priors: {},
+    categoryPreference: categoryPreference(session),
     context: { rain: null, nextEventSoon: null },
   };
   // No Google-derived features go to HF unless separately approved. No invented cuisine/taste tags.

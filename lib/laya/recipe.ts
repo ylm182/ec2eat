@@ -23,6 +23,12 @@ export function encodeLaya(input: DecisionInput) {
       (p.state === "unknown" && input.priors[d]?.state === "inferred");
   });
   if (!active.length && !input.categoryPreference) throw new LayaFailure("laya_no_preference_evidence");
+  if (input.stage === "restaurant" && !input.candidates.some(c =>
+    (input.categoryPreference && c.categoryId) || active.some(d => {
+      const f = c.features[d];
+      return f && f.value !== null && f.confidence > 0;
+    })
+  )) throw new LayaFailure("laya_no_preference_evidence");
   const neutral = dimensions.filter(d => input.preferences[d].state === "neutral");
   const state = [
     "Match explicit preferences first. Values 0..1; 1 means:",

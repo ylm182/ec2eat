@@ -20,6 +20,8 @@ const author = z.object({
 });
 const place = z.object({
   id: placeIdSchema,
+  primaryType: z.string().max(100).optional(),
+  types: z.array(z.string().max(100)).max(100).optional(),
   displayName: z.object({ text: z.string().max(1000) }).optional(),
   formattedAddress: z.string().max(2000).optional(),
   location: z
@@ -53,12 +55,14 @@ const place = z.object({
     .optional(),
 });
 const SEARCH_FIELDS =
-  "id,location,businessStatus,currentOpeningHours.openNow,priceLevel";
+  "id,location,businessStatus,currentOpeningHours.openNow,priceLevel,primaryType,types";
 const DETAIL_FIELDS =
   "id,location,displayName,formattedAddress,businessStatus,currentOpeningHours.openNow,priceLevel,rating,googleMapsUri,attributions,photos";
 function searchPlace(value: z.infer<typeof place>): SearchPlace {
   return {
     placeId: value.id,
+    primaryType: value.primaryType ?? null,
+    types: value.types ?? [],
     location: value.location ?? null,
     businessStatus: value.businessStatus ?? null,
     openNow: value.currentOpeningHours?.openNow ?? null,

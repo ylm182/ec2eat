@@ -32,9 +32,9 @@ Warm encoded requests from the developer Mac measured about 1.5–2.0 seconds, w
 150ms circuit bookkeeping remains unchanged, so some warm requests can fall back.
 Taiwan route performance must be measured after rollout.
 
-PLACES_MODEL_INPUT_APPROVED remains false. Laya can rank app-authored meal archetypes;
-Google-derived restaurant candidates keep deterministic ranking. No real Google content
-was used in the tests. No raw Calendar text or secrets are sent to HF.
+The original archetype-only rollout kept PLACES_MODEL_INPUT_APPROVED false. The owner has
+now confirmed permission for restaurant ranking; see RESTAURANT_RANKING_ACTIVATION.md
+for the new retrieval flow and live smoke evidence. No raw Calendar text is sent to HF.
 
 ## Deployment configuration
 
@@ -80,3 +80,13 @@ through actual decisions, and passive automatic idle scale-down observation. No 
 Places model input was enabled. The production worker uses existing project compute
 identity; no service-account keys were created.
 - Final anonymous checks of /api/app/open and /api/app-open both returned HTTP 401.
+
+## Actual-restaurant activation review — 25 September 2026
+
+See [the ranking review](RESTAURANT_RANKING_REVIEW.md). The original review identified
+unresolved permitted use and limited restaurant feature evidence (distance/price only).
+A flag change alone does not implement meaningful cuisine/taste matching. A Google
+support case is drafted in [GOOGLE_MAPS_RANKING_SUPPORT.md](GOOGLE_MAPS_RANKING_SUPPORT.md)
+and has not been sent. Existing deterministic reordering is included in the clarification.
+
+Superseded by owner permission confirmation and [restaurant activation](RESTAURANT_RANKING_ACTIVATION.md).

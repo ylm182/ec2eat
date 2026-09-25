@@ -27,6 +27,8 @@ export const restaurantCardSchema = z.object({
 });
 export type RestaurantCard = z.infer<typeof restaurantCardSchema>;
 export type SearchPlace = {
+  primaryType?: string | null;
+  types?: string[];
   placeId: string;
   location: Coordinates | null;
   businessStatus: string | null;

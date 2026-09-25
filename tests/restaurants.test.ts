@@ -3,6 +3,9 @@ import { GooglePlacesProvider } from "../lib/providers/google-places";
 import { eligible, searchRestaurants } from "../lib/restaurants/search";
 import { syntheticPlaces } from "../lib/server/places";
 import { safeGoogleMapsUrl, selectable } from "../lib/restaurants/types";
+import { restaurantEvidence } from "../lib/restaurants/evidence";
+import { encodeLaya } from "../lib/laya/recipe";
+import { HeuristicDecisionProvider } from "../lib/providers/heuristic";
 import { sessionFixture } from "./fixtures";
 const centre = { latitude: 22.28, longitude: 114.16 };
 const signal = () => new AbortController().signal;
@@ -244,3 +247,75 @@ it("photo media is displayed only with a safe URL and its supplied author attrib
  const card=await new GooglePlacesProvider("test-only",false,transport).details("place-id",signal());
  expect(card.photo).toBeNull();expect(card.available).toBe(true);expect(calls).toBe(1);
  });
+
+
+it("keeps targeted candidates in a dense nearby set and caps the inference batch at ten", async () => {
+  const p = syntheticPlaces("results"); p.modelInputAllowed = true;
+  const base = (await p.nearby(centre, 3000, signal()))[0];
+  p.nearby = async () => Array.from({length:20}, (_, i) => ({...base, placeId:`near-${i}`, location:centre}));
+  const queries: string[] = [];
+  p.text = async q => {
+    queries.push(q);
+    return Array.from({length:8}, (_, i) => ({...base, placeId:`target-${queries.length}-${i}`,
+      location:{latitude:22.29,longitude:114.16}, primaryType:"ramen_restaurant"}));
+  };
+  const rank = vi.fn(async input => new HeuristicDecisionProvider().rank(input, signal()));
+  await searchRestaurants(sessionFixture(), centre, 3000, p, rank, signal());
+  expect(queries).toHaveLength(2);
+  const candidates = rank.mock.calls[0][0].candidates;
+  expect(candidates).toHaveLength(10);
+  expect(new Set(candidates.map((c: {id:string}) => c.id)).size).toBe(10);
+  expect(candidates.some((c: {id:string}) => c.id.startsWith("target-"))).toBe(true);
+  expect(candidates.some((c: {id:string}) => c.id.startsWith("near-"))).toBe(true);
+  expect(candidates[0].categoryId).toBe("noodles");
+});
+it("provider types map narrowly and never inherit archetype taste attributes", () => {
+  const base = {placeId:"test",location:centre,businessStatus:null,openNow:null,priceLevel:null};
+  expect(restaurantEvidence({...base,types:["japanese_restaurant"]})).toEqual({features:{}});
+  expect(restaurantEvidence({...base,types:["ramen_restaurant","salad_shop"]})).toEqual({features:{}});
+  expect(restaurantEvidence({...base,primaryType:"salad_shop",types:["restaurant"]}).categoryId).toBe("salad");
+  const evidence = restaurantEvidence({...base,types:["fine_dining_restaurant","ramen_restaurant"]});
+  expect(evidence.categoryId).toBe("noodles");
+  expect(Object.keys(evidence.features)).toEqual(["formality"]);
+});
+it("avoids inference on absent restaurant evidence", async () => {
+  const p = syntheticPlaces("results"); p.modelInputAllowed = true;
+  const s = sessionFixture();
+  s.preferences = Object.fromEntries(Object.keys(s.preferences).map(k => [k,{state:"unknown",value:null,strength:0}])) as typeof s.preferences;
+  s.preferences.spiciness = {state:"answered",value:.8,strength:1};
+  const rank = vi.fn(async input => {
+    expect(() => encodeLaya(input)).toThrow("laya_no_preference_evidence");
+    return new HeuristicDecisionProvider().rank(input, signal());
+  });
+  await searchRestaurants(s,centre,3000,p,rank,signal());
+  expect(rank).toHaveBeenCalledOnce();
+});
+it("asks preference-driven searches even when nearby succeeds and tolerates their failure", async () => {
+  const p = syntheticPlaces("results");
+  const text = vi.spyOn(p,"text").mockRejectedValue(new Error("unavailable"));
+  const result = await searchRestaurants(sessionFixture(),centre,3000,p,vi.fn(),signal());
+  expect(text).toHaveBeenCalledTimes(2);
+  expect(result.candidates).toHaveLength(3);
+});
+
+it("explicit food category drives retrieval and is passed to both rankers", async () => {
+  const p = syntheticPlaces("results"); p.modelInputAllowed = true;
+  const s = sessionFixture();
+  s.questions.push({instanceId:"category-test",issuedAt:s.createdAt,definition:{id:"category",version:1,kind:"category",prompt:"Food",contextTags:[],options:[{id:"salad",label:"沙律",categoryId:"salad"}]}});
+  s.answers.push({questionInstanceId:"category-test",action:"category",optionId:"salad",value:null,answeredAt:s.createdAt,requestId:"category-answer"});
+  const query = vi.spyOn(p,"text");
+  const rank = vi.fn(async input => new HeuristicDecisionProvider().rank(input,signal()));
+  await searchRestaurants(s,centre,3000,p,rank,signal());
+  expect(query.mock.calls.some(call => call[0].includes("沙律"))).toBe(true);
+  expect(rank.mock.calls[0][0].categoryPreference).toBe("salad");
+});
+it("reads provider types without adding reviews or names to search payloads", async () => {
+  const transport = vi.fn(async () => new Response(JSON.stringify({places:[{id:"type-test",location:centre,primaryType:"ramen_restaurant",types:["restaurant","ramen_restaurant"]}]})));
+  const p = new GooglePlacesProvider("test-only",true,transport);
+  const found = await p.nearby(centre,3000,signal());
+  expect(found[0].primaryType).toBe("ramen_restaurant");
+  expect(restaurantEvidence(found[0]).categoryId).toBe("noodles");
+  const init = (transport.mock.calls[0] as unknown as [string, RequestInit])[1];
+  expect(JSON.stringify(init.headers)).toContain("primaryType");
+  expect(JSON.stringify(init.headers)).not.toMatch(/reviews|displayName/);
+});
