@@ -13,7 +13,7 @@ import {
   restaurantCardSchema,
   type RestaurantCard,
 } from "@/lib/restaurants/types";
-import { hongKongTime, outcomeLabels } from "@/lib/history/schema";
+import { outcomeLabels } from "@/lib/history/schema";
 export function OutcomeForm({
   uid,
   session: initial,
@@ -187,8 +187,7 @@ export function OutcomeForm({
   if (!eligible)
     return (
       <p className="hint">
-        選擇至少四小時後，喺另一次開啟先可以確認或更正。最早確認時間：
-        {hongKongTime(session.outcome.eligibleAfter!)}（香港時間）。
+        請先選擇餐廳，再確認用餐結果。
       </p>
     );
   return (

@@ -15,3 +15,7 @@ Defaults: snacks cover savoury snacks, sweets and bakery food. Search relevance 
 Snack Text Search omits the strict restaurant-only type restriction so bakeries/dessert venues are not excluded solely by their Google type. Main-meal queries retain that restriction. All candidates still require actual coordinates within the selected radius and must not be known closed.
 
 Verification: 135 unit/component tests and 41 Firebase emulator tests passed; typecheck and production build passed. Manual visual/mobile acceptance is left to the owner as requested.
+
+
+### Owner update: immediate History confirmation
+Explicit History confirmation/correction and actual-restaurant lookup are available immediately after selection, including the selecting opening. This supersedes the previous manual four-hour/opening gate. Automatic reminders retain the four-hour/later-opening gate and only target PENDING outcomes. A confirmed outcome never needs a second confirmation after four hours. Authentication, ownership, revisions and idempotency remain enforced.

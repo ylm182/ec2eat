@@ -7,15 +7,17 @@ import {
   actualSearchInput,
 } from "../lib/outcomes/contracts";
 describe("outcome gates and intent", () => {
-  it("requires a selected session, four hours, and a different opening even for manual History", () => {
+  it("allows explicit confirmation immediately in the selecting opening, but only for selected sessions", () => {
     const s = selectedFixture(),
       at = Date.parse(s.outcome.eligibleAfter!);
-    expect(canConfirm(s, "another", at - 1)).toBe(false);
+    expect(canConfirm(s, "another", at - 1)).toBe(true);
     expect(canConfirm(s, "another", at)).toBe(true);
-    expect(canConfirm(s, s.selectionLaunchId!, at + 86400000)).toBe(false);
+    expect(canConfirm(s, s.selectionLaunchId!, Date.parse(s.selectedAt!))).toBe(true);
+    expect(canPrompt(s, "another", at - 1)).toBe(false);
+    expect(canPrompt(s, s.selectionLaunchId!, at + 86400000)).toBe(false);
     expect(canConfirm(sessionFixture(), "another", at)).toBe(false);
   });
-  it("snooze suppresses automatic prompts only; explicit History confirmation still uses the age/opening gates", () => {
+  it("snooze suppresses automatic prompts only; explicit History confirmation is immediate", () => {
     const s = selectedFixture(),
       at = Date.parse(s.outcome.eligibleAfter!);
     s.outcome.snoozedUntil = new Date(at + 86400000).toISOString();

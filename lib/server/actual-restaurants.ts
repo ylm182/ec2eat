@@ -19,7 +19,7 @@ export async function searchActualRestaurants(
   const input = actualSearchInput.parse(raw);
   const session = await userRepository(db, user).session(input.sessionId);
   if (!canConfirm(session, input.launchId, clock()))
-    throw new ApiError(409, "OUTCOME_NOT_ELIGIBLE", "未到確認時間。");
+    throw new ApiError(409, "OUTCOME_NOT_ELIGIBLE", "請先選擇餐廳，再確認用餐結果。");
   const p = provider();
   if (p.source !== session.search?.source)
     throw new ApiError(

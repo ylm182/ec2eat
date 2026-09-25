@@ -46,19 +46,17 @@ export const actualSearchInput = z
     query: z.string().trim().min(2).max(80),
   })
   .strict();
-export function canConfirm(s: DecisionSession, launchId: string, now: number) {
-  return (
-    s.status === "SELECTED" &&
-    s.selectionLaunchId !== launchId &&
-    s.selectedAt !== null &&
-    s.outcome.eligibleAfter !== null &&
-    now >= Date.parse(s.selectedAt) + 4 * 3600000 &&
-    now >= Date.parse(s.outcome.eligibleAfter)
-  );
+// Explicit confirmation (including History) is available immediately after selection.
+export function canConfirm(s: DecisionSession, _launchId: string, _now: number) {
+  return s.status === "SELECTED" && s.selectedAt !== null;
 }
 export function canPrompt(s: DecisionSession, launchId: string, now: number) {
   return (
     canConfirm(s, launchId, now) &&
+    s.selectionLaunchId !== launchId &&
+    s.outcome.eligibleAfter !== null &&
+    now >= Date.parse(s.selectedAt!) + 4 * 3600000 &&
+    now >= Date.parse(s.outcome.eligibleAfter) &&
     s.outcome.status === "PENDING" &&
     (s.outcome.snoozedUntil === null ||
       now >= Date.parse(s.outcome.snoozedUntil))

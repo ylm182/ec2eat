@@ -194,7 +194,7 @@ export function outcomeRepository(
           throw new ApiError(
             409,
             "OUTCOME_NOT_ELIGIBLE",
-            "選擇至少四小時後，喺另一次開啟先可以確認。",
+            "請先選擇餐廳，再確認用餐結果。",
           );
         if (input.snooze && s.outcome.status !== "PENDING")
           throw new ApiError(409, "INVALID_STATE", "已確認嘅結果唔可以略過。");

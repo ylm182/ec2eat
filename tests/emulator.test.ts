@@ -1232,15 +1232,24 @@ describe("M8 delayed outcomes and corrections", () => {
     expectedOutcomeRevision: s.outcome.revision,
     ...(status ? { status } : { snooze: true }),
   });
-  it("never prompts or confirms immediately or in the selecting launch; an empty opening stays empty as time passes", async () => {
+  it("immediate History confirmation in the selecting opening prevents reminders after four hours", async () => {
+    const { repo, s, setTime } = await setup("outcome-immediate-history");
+    setTime(Date.parse(s.selectedAt!));
+    const input = { ...body(s, "history-confirm", "VISITED_SELECTED"), launchId: s.selectionLaunchId! };
+    const confirmed = await repo.save(s.id, input);
+    expect(confirmed.outcome.status).toBe("VISITED_SELECTED");
+    expect(await repo.save(s.id, input)).toEqual(confirmed);
+    setTime(eligible + 1);
+    expect((await repo.open({ requestId: "four-hours", launchId: "next-opening" })).session).toBeNull();
+    setTime(eligible + 86400000);
+    expect((await repo.open({ requestId: "tomorrow", launchId: "tomorrow-opening" })).session).toBeNull();
+  });
+  it("never automatically prompts immediately or in the selecting launch; an empty opening stays empty as time passes", async () => {
     const { repo, s, setTime, db, user } = await setup("outcome-boundary");
     setTime(eligible - 1);
     expect(
       (await repo.open({ requestId: "early", launchId: "early" })).session,
     ).toBeNull();
-    await expect(
-      repo.save(s.id, body(s, "too-early", "VISITED_SELECTED")),
-    ).rejects.toMatchObject({ code: "OUTCOME_NOT_ELIGIBLE" });
     setTime(eligible);
     expect(
       (await repo.open({ requestId: "early", launchId: "early" })).session,
@@ -1253,12 +1262,6 @@ describe("M8 delayed outcomes and corrections", () => {
         })
       ).session,
     ).toBeNull();
-    await expect(
-      repo.save(s.id, {
-        ...body(s, "same-opening", "VISITED_SELECTED"),
-        launchId: s.selectionLaunchId!,
-      }),
-    ).rejects.toMatchObject({ code: "OUTCOME_NOT_ELIGIBLE" });
     const opened = await repo.open({ requestId: "open", launchId: "later" });
     expect(opened.session?.id).toBe(s.id);
     expect(opened.session?.outcome.status).toBe("PENDING");
