@@ -146,7 +146,7 @@ function AuthenticatedDecision({ uid }: { uid: string }) {
     // This component is keyed by verified UID.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  async function start(searchRadiusM: 3000 | 10000 = 3000) {
+  async function start(searchRadiusM: 1000 | 2000 | 5000 = 1000) {
     if (locked.current) return;
     locked.current = true;
     setBusy(true);
@@ -309,7 +309,7 @@ function AuthenticatedDecision({ uid }: { uid: string }) {
             ))}
           </select>
           <EntrySwipe key="range" kind="range" disabled={busy || locating || !!recoverId || !area}
-            onChoose={(direction) => void start(direction === "left" ? 3000 : 10000)} />
+            onChoose={(direction) => void start(direction === "left" ? 1000 : direction === "up" ? 2000 : 5000)} />
           </>}
           {busy && <Loading label="準備中" />}
 

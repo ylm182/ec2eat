@@ -43,7 +43,7 @@ it.each(["meal", "snack", "any"] as const)("preserves explicit dining intent %s 
 });
 describe("M4 context boundaries", () => {
   it("retains explicit search scope without retaining GPS coordinates", async () => {
-    for (const searchRadiusM of [3000, 10000] as const) {
+    for (const searchRadiusM of [1000, 2000, 5000, 3000, 10000] as const) {
       const input = createSessionInput.parse({requestId: "radius", launchId: "open", searchRadiusM,
         location: {latitude: 22.28, longitude: 114.185}});
       const context = await collectContext("u", input, absent, now);

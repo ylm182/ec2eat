@@ -127,7 +127,7 @@ export const contextSchema = z
     meal: z.enum(["lunch", "dinner", "other"]),
     area: text,
     diningIntent: z.enum(["meal", "snack", "any"]).optional(),
-    searchRadiusM: z.union([z.literal(3000), z.literal(10000)]).optional(),
+    searchRadiusM: z.union([z.literal(1000), z.literal(2000), z.literal(5000), z.literal(3000), z.literal(10000)]).optional(),
     locationSource: z.enum(["gps", "manual"]),
     weather: z
       .object({
@@ -371,7 +371,7 @@ export const createSessionInput = z
     launchId: idSchema,
     area: text.optional(),
     diningIntent: z.enum(["meal", "snack", "any"]).optional(),
-    searchRadiusM: z.union([z.literal(3000), z.literal(10000)]).optional(),
+    searchRadiusM: z.union([z.literal(1000), z.literal(2000), z.literal(5000), z.literal(3000), z.literal(10000)]).optional(),
     location: z
       .object({
         latitude: z.number().min(-90).max(90),

@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { SelectedRestaurantName } from "./SelectedRestaurantName";
 import { useEffect, useState } from "react";
 import { currentLaunchId } from "@/lib/client/launch";
 import { authorizedJson } from "@/lib/client/decision-api";
@@ -84,9 +85,7 @@ export function AppWarmup({ uid }: { uid: string }) {
           <p>
             {hongKongTime(prompt.selectedAt!)} · {prompt.context.area}
           </p>
-          <p className="history-id">
-            當時揀咗：{prompt.decision.selectedPlaceId}
-          </p>
+          <SelectedRestaurantName key={prompt.id} uid={uid} sessionId={prompt.id} placeId={prompt.decision.selectedPlaceId} />
           <p>
             <Link href="/history">睇返餐廳及當時選擇 →</Link>
           </p>

@@ -600,7 +600,7 @@ describe("M5 shared scoring and warm-up coordination", () => {
 });
 
 describe("M6 restaurant transactions", () => {
-  async function setup(label: string, mode = "results", searchRadiusM?: 3000 | 10000) {
+  async function setup(label: string, mode = "results", searchRadiusM?: 1000 | 2000 | 5000 | 3000 | 10000) {
     const { restaurantRepository } = await import("../lib/server/restaurants");
     const { syntheticPlaces } = await import("../lib/server/places");
     const identity = await googleToken(label);
@@ -636,7 +636,7 @@ describe("M6 restaurant transactions", () => {
     expect((await repo.cards(session.id,true)).cards).toHaveLength(1);
   });
   it("uses the explicitly chosen radius and does not expand beyond 10 km", async () => {
-    for (const radius of [3000, 10000] as const) {
+    for (const radius of [1000, 2000, 5000, 3000, 10000] as const) {
       const { session, provider, repo } = await setup(`radius-${radius}`, "closed", radius);
       const observed: number[] = [];
       const nearby = provider.nearby;
