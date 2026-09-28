@@ -296,7 +296,7 @@ export function RestaurantResults({
                     {(card.distanceM / 1000).toFixed(1)} 公里（非步行距離）
                   </p>
                 )}
-                <div className="restaurant-actions">
+                <div className={`restaurant-actions${selected ? " is-selected" : ""}`}>
                 {!selected && (
                   <button
                     className="primary"
@@ -314,6 +314,12 @@ export function RestaurantResults({
                       : "揀呢間"}
                   </button>
                 )}
+                {card.name?.trim() ? <a
+                  className="restaurant-map-link"
+                  href={`https://www.openrice.com/zh/hongkong/restaurants?whatwhere=${encodeURIComponent(card.name.trim())}`}
+                  target="_blank" rel="noopener noreferrer"
+                  aria-label={`在 Openrice 搜尋${card.name}`}
+                >Openrice</a> : <button disabled className="restaurant-map-link">Openrice</button>}
                 {card.source === "google-places" ? <a
                   className="restaurant-map-link"
                   href={mapsUrl(card.placeId)}

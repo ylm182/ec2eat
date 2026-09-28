@@ -809,7 +809,7 @@ main:has(.live-decision) { display:flex; flex-direction:column; }
 @media (prefers-reduced-motion:reduce) { .restaurant-loading-ring,.restaurant-loading-food { animation:none; } }
 @media (max-height:600px) { .restaurant-loading {gap:8px;} .restaurant-loading-dial {width:90px;height:90px;} .restaurant-loading-food {font-size:40px;} }
 
-.restaurant-actions { display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:stretch; margin-top:16px; }
+.restaurant-actions { display:grid; grid-template-columns:minmax(0, .8fr) minmax(0, .9fr) minmax(0, 1.3fr); gap:6px; align-items:stretch; margin-top:16px; }
 .restaurant-actions > :only-child { grid-column:1 / -1; }
 .restaurant-actions .restaurant-map-link {
   display:flex; align-items:center; justify-content:center; min-height:48px;
@@ -822,3 +822,6 @@ main:has(.live-decision) { display:flex; flex-direction:column; }
 @media (prefers-reduced-motion:reduce) { .selection-fireworks { display:none; } }
 .weather-summary { font-size:12px; font-weight:400; color:#1f1f1f; }
 .weather-summary [translate="no"] { white-space:nowrap; }
+
+.restaurant-actions.is-selected { grid-template-columns:1fr 1fr; }
+.restaurant-actions > button, .restaurant-actions > .restaurant-map-link { min-width:0; padding:12px 4px; font-size:12px; }
