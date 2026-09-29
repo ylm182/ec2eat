@@ -1,8 +1,10 @@
 "use client";
+import { answerLabels } from "@/lib/domain/answer-labels";
+import type { DecisionSession } from "@/lib/domain/schema";
 import { useEffect, useState } from "react";
 
 /** A client-side estimate, never a claim of server progress. */
-export function RestaurantLoading({ phase = "search", searchEstimate = 20 }: { phase?: "search" | "details"; searchEstimate?: number }) {
+export function RestaurantLoading({ phase = "search", searchEstimate = 20, session }: { session?: DecisionSession; phase?: "search" | "details"; searchEstimate?: number }) {
   // Keep the same clock as ranking transitions into loading restaurant details.
   const [estimate] = useState(() => phase === "search" ? searchEstimate : 5);
   const [elapsed, setElapsed] = useState(0);
@@ -25,6 +27,7 @@ export function RestaurantLoading({ phase = "search", searchEstimate = 20 }: { p
       <span className="restaurant-loading-number">{overdue ? elapsed : remaining}</span>
       <span>秒</span>
     </div>
+    {session && <ul className="loading-answers" aria-label="今次揀過嘅答案">{answerLabels(session).map((label, i) => <li key={i}>{label}</li>)}</ul>}
     <p className="restaurant-loading-note">{overdue ? "完成後會自動顯示結果" : "時間係估算，完成即刻顯示"}</p>
   </div>;
 }

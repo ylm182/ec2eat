@@ -1,4 +1,5 @@
 "use client";
+import { parseRecommendation, type DisplaySummary } from "@/lib/restaurants/summary-response";
 import { WeatherSummary } from "./WeatherSummary";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -14,7 +15,7 @@ import {
   DecisionCategoryCard,
   type SwipeSubmission,
 } from "./DecisionSwipeCard";
-import { decisionApi, DecisionApiError } from "@/lib/client/decision-api";
+import { authorizedJson, decisionApi, DecisionApiError } from "@/lib/client/decision-api";
 import {
   createSessionInput,
   idSchema,
@@ -37,6 +38,7 @@ export function DecisionFlow() {
   );
 }
 function AuthenticatedDecision({ uid }: { uid: string }) {
+  const [summaryResponse, setSummaryResponse] = useState<{ id: string; summaries: DisplaySummary[] } | null>(null);
   const [session, setSession] = useState<DecisionSession | null>(null);
   const [diningIntent, setDiningIntent] = useState<"meal" | "snack" | "any" | null>(null);
   const [area, setArea] = useState("");
@@ -226,11 +228,8 @@ function AuthenticatedDecision({ uid }: { uid: string }) {
     };
     stopRequest.current = body;
     try {
-      await decisionApi(
-        uid,
-        `/api/decision/sessions/${session.id}/recommend`,
-        body,
-      );
+      const result = parseRecommendation(await authorizedJson(uid, `/api/decision/sessions/${session.id}/recommend`, body));
+      setSummaryResponse({ id: session.id, summaries: result.summaries });
     } catch (e) {
       setError(e instanceof Error ? e.message : text.error);
     } finally {
@@ -267,7 +266,7 @@ function AuthenticatedDecision({ uid }: { uid: string }) {
   const question = session?.questions.at(-1);
   return (
     <section className="live-decision">
-      {recommending && <RestaurantLoading />}
+      {recommending && <RestaurantLoading session={session ?? undefined} searchEstimate={60} />}
       {error && <p role="alert">{error}</p>}
       {recoverId && !session ? (
         <div>
@@ -353,6 +352,7 @@ function AuthenticatedDecision({ uid }: { uid: string }) {
               setSession(next);
               setError("");
             }}
+            initialSummaries={summaryResponse?.id === session.id ? summaryResponse.summaries : []}
             skipAuto={!!error}
           />
           {session.status === "SELECTED" && (

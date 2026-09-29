@@ -38,3 +38,15 @@ A live two-restaurant smoke test successfully called Places, WALK/DRIVE Routes, 
 6. Confirm loading progress remains visible during summaries/scoring and old saved choices still open.
 
 Final verification: 165 unit/component tests and all 44 Firebase Auth/Firestore emulator tests passed. TypeScript checks, production build, client secret-bundle scan and declared-region release checks passed. Frontend visual/gesture acceptance remains for the user.
+
+## Follow-up UI: answers, Cantonese summaries and consistent actions
+
+The loading screen now lists the user's travel/meal choice and answered question labels in small bullet points. Neutral answers remain explicitly neutral; unanswered questions and inferred historical preferences are not presented as chosen answers.
+
+After Laya ranking, Gemini translates only the shortlisted restaurants' exact scoring descriptions into readable Traditional Chinese Cantonese. This includes the exact route evidence appended to the scoring input. Translation uses the same fixed Gemini model, up to four concurrent requests, a ten-second per-request limit and 650-character output limit. Translation failure omits that display paragraph without changing scores. The search estimate is now 60 seconds for the travel flow.
+
+Translations are returned outside the durable session object and kept only in the current result component. They are not written to Firestore, operation replay documents, browser storage or logs. On reload, a replay, old saved choices or failed translation, the UI explicitly states that no scoring summary is available; it does not manufacture a replacement and call it the original model input. A heuristic fallback has no Laya summary displayed.
+
+All three restaurant actions now share equal columns, the same white background/purple text, font, padding and 48-pixel minimum height. The old primary-button colour and button-only margin are removed. Keyboard focus and disabled states remain.
+
+Frontend acceptance: during a new search confirm bullets match the selected answers (including a neutral answer); after successful Laya scoring confirm Cantonese summaries appear on the corresponding cards; check the three action buttons align on a narrow mobile viewport; select a restaurant and confirm its summary remains while the other cards disappear. Reloading intentionally does not retain provider-derived summaries.

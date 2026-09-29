@@ -19,7 +19,7 @@ async function setup(restored = false) {
   mock.decision.mockResolvedValue(saved);
   function Harness() {
     const [session, setSession] = useState(restored ? saved : { ...saved, status: "READY" as const, decision: { ...saved.decision, selectedPlaceId: null } });
-    return <RestaurantResults uid="alice" session={session} location={null} onSession={setSession} />;
+    return <RestaurantResults uid="alice" session={session} location={null} initialSummaries={[{ placeId: "place-b", text: "湯底清淡，食客話出餐快，步行約11分鐘。" }]} onSession={setSession} />;
   }
   render(<Harness />);
   await screen.findByText("餐廳乙");
@@ -55,6 +55,7 @@ it("does not celebrate or hide choices when saving fails", async () => {
 it("shows actual walking distance and time with joined restaurant actions", async () => {
   await setup();
   expect(await screen.findByText("由你的位置：步行 850 米 · 約 11 分鐘")).toBeTruthy();
+  expect(screen.getByText("湯底清淡，食客話出餐快，步行約11分鐘。")).toBeTruthy();
   const group = screen.getByRole("group", { name: "餐廳乙操作" });
   expect(Array.from(group.querySelectorAll("button, a")).map(e => e.textContent)).toEqual(["揀呢間", "Openrice", "Google Maps ↗"]);
 });

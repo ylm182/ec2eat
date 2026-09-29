@@ -19,5 +19,5 @@ export function restaurantEnrichment(provider: RestaurantProvider, travelRequest
   if (!provider.modelInputAllowed || !provider.facts) throw new ApiError(503, "SUMMARY_NOT_CONFIGURED", "餐廳摘要服務未接通。", true);
   const routes = configuredRoutes();
   const gemini = new GeminiRestaurantSummary(process.env.GOOGLE_CLOUD_PROJECT!, process.env.VERTEX_LOCATION ?? "global");
-  return { routes: (...args) => routes.matrix(...args), facts: (...args) => provider.facts!(...args), summarize: (...args) => gemini.summarize(...args) };
+  return { translate: (...args) => gemini.translate(...args), routes: (...args) => routes.matrix(...args), facts: (...args) => provider.facts!(...args), summarize: (...args) => gemini.summarize(...args) };
 }

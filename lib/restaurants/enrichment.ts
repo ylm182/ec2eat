@@ -5,6 +5,7 @@ import type { RestaurantFacts, SearchPlace } from "./types";
 export type RestaurantEnrichment = {
   routes(origin: Coordinates, ids: string[], mode: "WALK" | "DRIVE", signal: AbortSignal): Promise<Map<string, RouteMetric>>;
   facts(id: string, signal: AbortSignal): Promise<RestaurantFacts>;
+  translate?(description: string, signal: AbortSignal): Promise<string>;
   summarize(facts: RestaurantFacts, travel: TravelResult, signal: AbortSignal): Promise<string>;
 };
 export async function enrichRestaurants(candidates: SearchPlace[], origin: Coordinates, choice: TravelChoice | undefined, deps: RestaurantEnrichment, signal: AbortSignal) {
@@ -40,4 +41,22 @@ export async function enrichRestaurants(candidates: SearchPlace[], origin: Coord
     }
   }));
   return { candidates: eligible, descriptions, incomplete };
+}
+
+/** Translate only the exact scoring input of shortlisted restaurants; never re-summarize facts. */
+export async function translateShortlist(ids: string[], descriptions: Map<string, string>, translate: RestaurantEnrichment["translate"], signal: AbortSignal) {
+  if (!translate) return [];
+  const output: { placeId: string; text: string }[] = [];
+  let cursor = 0;
+  await Promise.all(Array.from({ length: Math.min(4, ids.length) }, async () => {
+    for (;;) {
+      const id = ids[cursor++]; if (!id) return;
+      const description = descriptions.get(id); if (!description) continue;
+      try {
+        const text = await bounded(10000, s => translate(description, s), signal);
+        if (text.trim() && text.length <= 650) output.push({ placeId: id, text });
+      } catch { signal.throwIfAborted(); /* Translation never changes ranking. */ }
+    }
+  }));
+  return output;
 }

@@ -55,3 +55,35 @@ it("sends the summary verbatim for independent scoring even without legacy taste
  expect(result.body.inputs.state).toContain("Explicit preference: light");
  expect(result.body.inputs.state).not.toContain("Candidate rows");
 });
+it("translates only exact shortlist scoring inputs and tolerates individual translation failure", async () => {
+ const { translateShortlist } = await import("../lib/restaurants/enrichment");
+ const translate = vi.fn(async (text: string) => { if (text === "failed") throw Error("timeout"); return "清淡午餐，步行約6分鐘。"; });
+ const result = await translateShortlist(["a", "b"], new Map([["a", "Exact input. Walking: distanceMeters=800, duration=360s."], ["b", "failed"], ["excluded", "not shortlisted"]]), translate, signal());
+ expect(result).toEqual([{ placeId: "a", text: "清淡午餐，步行約6分鐘。" }]);
+ expect(translate.mock.calls.map(c => c[0])).toEqual(["Exact input. Walking: distanceMeters=800, duration=360s.", "failed"]);
+});
+it("asks Gemini to translate the actual scoring text into Cantonese without adding evidence", async () => {
+ const transport = vi.fn(async () => new Response(JSON.stringify({ candidates: [{content: {parts: [{text: JSON.stringify({summary:"清淡午餐，步行800米，約6分鐘。"})}]}}] })));
+ const result = await new GeminiRestaurantSummary("sample-project", "global", async()=>"mock", transport).translate("Light lunch. Walking: distanceMeters=800, duration=360s.", signal());
+ expect(result).toContain("步行800米");
+ const [, init] = transport.mock.calls[0] as unknown as [string,RequestInit];
+ const body = JSON.parse(init.body as string);
+ expect(body.contents[0].parts[0].text).toBe("Light lunch. Walking: distanceMeters=800, duration=360s.");
+ expect(body.systemInstruction.parts[0].text).toContain("Hong Kong Cantonese");
+});
+it("returns Cantonese only for the top ten without adding provider text to persisted candidate records", async () => {
+ const { searchRestaurants } = await import("../lib/restaurants/search");
+ const { sessionFixture } = await import("./fixtures");
+ const { syntheticPlaces } = await import("../lib/server/places");
+ const provider = syntheticPlaces("results"); provider.modelInputAllowed = true;
+ const places = Array.from({length:12}, (_,i)=>({...candidates[0],placeId:`p${i}`}));
+ provider.nearby = async()=>places; provider.text = async()=>places;
+ const translate = vi.fn(async (text:string)=>`廣東話：${text}`);
+ const deps:RestaurantEnrichment = {routes:async()=>new Map(places.map(p=>[p.placeId,route(360)])),facts:async(id)=>({...facts,displayName:id}),summarize:async(f)=>`${f.displayName} light lunch.`,translate};
+ const result = await searchRestaurants(sessionFixture(),origin,3000,provider,async input=>({version:1,provider:"laya",model:"test",revision:"test",confidence:null,confidenceKind:"none",latencyMs:0,fallbackReason:null,entries:input.candidates.map(c=>({id:c.id,score:Number(c.id.slice(1))/12,weight:1/input.candidates.length}))}),signal(),deps);
+ expect(result.candidates).toHaveLength(10);
+ expect(translate).toHaveBeenCalledTimes(10);
+ expect(result.restaurantSummaries.map(s=>s.placeId).sort()).toEqual(result.candidates.map(c=>c.placeId).sort());
+ expect(translate.mock.calls.every(([text])=>text.includes("Walking: distanceMeters=800, duration=360s."))).toBe(true);
+ expect(Object.keys(result.candidates[0]).sort()).toEqual(["placeId","score","weight"]);
+});

@@ -1,4 +1,5 @@
 "use client";
+import { parseRecommendation, type DisplaySummary } from "@/lib/restaurants/summary-response";
 import { ButtonGroup } from "./ui/button-group";
 import { travelResultSchema, type TravelResult } from "@/lib/restaurants/travel";
 import { SelectionFireworks } from "./SelectionFireworks";
@@ -27,13 +28,16 @@ export function RestaurantResults({
   location,
   onSession,
   skipAuto = false,
+  initialSummaries = [],
 }: {
   uid: string;
   session: DecisionSession;
   location: Coordinates | null;
   onSession: (s: DecisionSession) => void;
   skipAuto?: boolean;
+  initialSummaries?: DisplaySummary[];
 }) {
+  const [summaries, setSummaries] = useState<DisplaySummary[]>(initialSummaries);
   const [routes, setRoutes] = useState<Record<string, TravelResult>>({});
   const [routeOrigin, setRouteOrigin] = useState<"gps" | "manual">("manual");
   const [routesLoading, setRoutesLoading] = useState(false);
@@ -132,7 +136,8 @@ export function RestaurantResults({
     };
     pending.current = body;
     try {
-      await decisionApi(uid, path + "/recommend", body);
+      const result = parseRecommendation(await authorizedJson(uid, path + "/recommend", body));
+      if (mounted.current) setSummaries(result.summaries);
       pending.current = null;
       await refresh();
     } catch (e) {
@@ -211,7 +216,7 @@ export function RestaurantResults({
   }, [selected, celebrate]);
   return (
     <section aria-label="餐廳選擇" className="restaurant-results">
-      {(searching || detailsLoading) ? <RestaurantLoading phase={searching ? "search" : "details"} searchEstimate={session.context.travelChoice ? 45 : 20} /> : busy ? <Loading label="儲存中" /> : null}
+      {(searching || detailsLoading) ? <RestaurantLoading session={session} phase={searching ? "search" : "details"} searchEstimate={session.context.travelChoice ? 60 : 20} /> : busy ? <Loading label="儲存中" /> : null}
       {error && <p role="alert">{error}</p>}
       {session.status === "RECOMMENDING" ? (
         <>
@@ -313,10 +318,11 @@ export function RestaurantResults({
                   ? `步行 ${Math.round(routes[card.placeId].walking!.distanceMeters)} 米 · 約 ${Math.ceil(routes[card.placeId].walking!.durationSeconds / 60)} 分鐘`
                   : "步行路線暫時未能提供"}</p>
                 {session.context.travelChoice === "drive20" && <p>{routes[card.placeId]?.driving ? `私家車約 ${Math.ceil(routes[card.placeId].driving!.durationSeconds / 60)} 分鐘（未計即時交通及泊車）` : "駕車路線暫時未能提供"}</p>}
+                <p className="restaurant-scoring-summary">{summaries.find(s => s.placeId === card.placeId)?.text ?? "今次未有可顯示嘅評分摘要。"}</p>
                 <ButtonGroup aria-label={`${card.name ?? "餐廳"}操作`} className={`restaurant-actions${selected ? " is-selected" : ""}`}>
                 {!selected && (
                   <button
-                    className="primary"
+                    className="restaurant-action"
                     disabled={
                       busy ||
                       !card.available ||

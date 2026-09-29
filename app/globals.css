@@ -832,3 +832,17 @@ main:has(.live-decision) { display:flex; flex-direction:column; }
 .restaurant-actions.button-group > :last-child { border-radius:0 12px 12px 0; }
 .restaurant-actions.button-group > :not(:first-child) { border-left:0; }
 .restaurant-actions.button-group > :focus-visible { position:relative; z-index:1; outline:3px solid #7843ce; outline-offset:2px; }
+
+.loading-answers { margin:0; padding-left:20px; width:min(320px,85%); text-align:left; font-size:12px; line-height:1.65; color:#65556e; list-style:disc; }
+.restaurant-loading { overflow-y:auto; padding:20px 12px; justify-content:safe center; gap:14px; }
+.restaurant-scoring-summary { font-size:14px; line-height:1.75; color:#493d50; white-space:pre-line; }
+.restaurant-actions.button-group { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.restaurant-actions.button-group.is-selected { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.restaurant-actions.button-group > :is(button,a) {
+  display:flex; align-items:center; justify-content:center; gap:2px;
+  margin:0; min-width:0; min-height:48px; padding:12px 4px;
+  font:600 12px/1.3 Arial,sans-serif; text-align:center; white-space:nowrap;
+  background:#fff; color:#522fa0; text-decoration:none;
+}
+.restaurant-actions.button-group > :is(button,a):hover:not(:disabled) { background:#f2eaff; }
+.restaurant-actions.button-group > button:disabled { opacity:.5; cursor:not-allowed; }

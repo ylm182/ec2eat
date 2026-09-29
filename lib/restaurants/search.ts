@@ -1,5 +1,5 @@
 import { travelLimits } from "./travel";
-import { enrichRestaurants, type RestaurantEnrichment } from "./enrichment";
+import { translateShortlist, enrichRestaurants, type RestaurantEnrichment } from "./enrichment";
 import { restaurantEvidence } from "./evidence";
 import { bounded } from "../providers/google-context";
 import { rankRestaurantPool, type RestaurantRanker } from "./ranking";
@@ -151,6 +151,7 @@ export async function searchRestaurants(
   const shortlist = result.entries.slice(0, 10);
   const sum = shortlist.reduce((n, c) => n + c.weight, 0);
   return {
+    restaurantSummaries: result.provider === "laya" ? await translateShortlist(shortlist.map(c => c.id), descriptions, enrichment?.translate, signal) : [],
     result,
     poolSize: candidates.length,
     candidates: shortlist.map((c) => ({

@@ -30,3 +30,15 @@ it("uses a shorter estimate when only loading existing restaurant details",()=>{
   clock();render(<RestaurantLoading phase="details" />);
   expect(screen.getByText("5")).toBeTruthy();
 });
+it("lists only chosen answers, including neutral choices and travel/meal selections", async () => {
+  const { sessionFixture } = await import("./fixtures");
+  const session = sessionFixture();
+  session.context.travelChoice = "walk30"; session.context.diningIntent = "snack";
+  session.answers = [{ questionInstanceId:"question-1", action:"right",optionId:"right",value:.2, answeredAt:session.createdAt,requestId:"answer-1" }];
+  const view = render(<RestaurantLoading session={session} />);
+  const list = screen.getByRole("list", {name:"今次揀過嘅答案"});
+  expect(list.textContent).toBe("步行30分鐘內小食慢慢食");
+  session.answers[0] = {...session.answers[0],action:"neutral",optionId:null,value:null};
+  view.rerender(<RestaurantLoading session={session} />);
+  expect(list.textContent).toContain("快食快走／慢慢食：都得");
+});

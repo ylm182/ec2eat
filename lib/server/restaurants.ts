@@ -175,7 +175,7 @@ export function restaurantRepository(
             restaurantEnrichment(p, Boolean(stopped.context.travelChoice)),
           ),
         );
-        return await db.runTransaction(async (tx) => {
+        const committed = await db.runTransaction(async (tx) => {
           await assertDataActive(db, user.uid, tx, id);
           const [operation, saved] = await Promise.all([
             tx.get(op),
@@ -225,6 +225,8 @@ export function restaurantRepository(
           });
           return next;
         });
+        // Provider-derived text stays response-only, outside durable session/replay documents.
+        return found.restaurantSummaries.length ? { ...committed, restaurantSummaries: found.restaurantSummaries.filter(x => committed.decision.candidates.some(c => c.placeId === x.placeId)) } : committed;
       } catch (error) {
         await db.runTransaction(async (tx) => {
           await assertDataActive(db, user.uid, tx);
