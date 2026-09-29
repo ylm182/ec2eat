@@ -1,3 +1,5 @@
+import { travelLimits } from "./travel";
+import { enrichRestaurants, type RestaurantEnrichment } from "./enrichment";
 import { restaurantEvidence } from "./evidence";
 import { bounded } from "../providers/google-context";
 import { rankRestaurantPool, type RestaurantRanker } from "./ranking";
@@ -57,6 +59,7 @@ export async function searchRestaurants(
   provider: RestaurantProvider,
   rank: RestaurantRanker,
   signal: AbortSignal,
+  enrichment?: RestaurantEnrichment,
 ) {
   const top = rankCandidates(
     archetypes, session.preferences, {}, categoryPreference(session),
@@ -81,7 +84,7 @@ export async function searchRestaurants(
   // Interleave targeted pools and nearby results so close generic results
   // cannot crowd every preference-matched retrieval out of the scoring set.
   const orderedPools = [...pools.slice(1), pools[0]];
-  const candidates: SearchPlace[] = [];
+  let candidates: SearchPlace[] = [];
   const seen = new Set<string>();
   for (let i = 0; i < 20 && candidates.length < RESTAURANT_POOL_LIMIT; i++) {
     for (const pool of orderedPools) {
@@ -96,11 +99,21 @@ export async function searchRestaurants(
     if (failure?.status === "rejected") throw failure.reason;
   }
   signal.throwIfAborted();
+  let descriptions = new Map<string, string>();
+  let summaryFailed = false;
+  if (enrichment) {
+    const enriched = await enrichRestaurants(candidates, centre, session.context.travelChoice, enrichment, signal);
+    candidates = enriched.candidates; descriptions = enriched.descriptions; summaryFailed = enriched.incomplete;
+  } else if (session.context.travelChoice) {
+    throw new Error("ROUTES_NOT_CONFIGURED");
+  }
   const input: DecisionInput = {
     version: 1,
     stage: "restaurant",
+    ...(session.context.travelChoice ? { travelPreference: `${travelLimits[session.context.travelChoice].mode} within ${travelLimits[session.context.travelChoice].seconds / 60} minutes` } : {}),
     candidates: candidates.map((p) => ({
       id: p.placeId,
+      ...(descriptions.has(p.placeId) ? { summary: descriptions.get(p.placeId)! } : {}),
       ...restaurantEvidence(p),
       distanceM: distanceM(centre, p.location!),
       features: {
@@ -128,12 +141,12 @@ export async function searchRestaurants(
   };
   // No Google-derived features go to HF unless separately approved. No invented cuisine/taste tags.
   let result: DecisionResult;
-  if (provider.modelInputAllowed && candidates.length) {
+  if (provider.modelInputAllowed && candidates.length && !summaryFailed) {
     result = await rankRestaurantPool(input, rank, signal);
   } else
     result = {
       ...(await new HeuristicDecisionProvider().rank(input, signal)),
-      fallbackReason: "places_model_input_not_approved",
+      fallbackReason: summaryFailed ? "restaurant_summary_unavailable" : "places_model_input_not_approved",
     };
   const shortlist = result.entries.slice(0, 10);
   const sum = shortlist.reduce((n, c) => n + c.weight, 0);

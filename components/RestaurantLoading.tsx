@@ -2,9 +2,9 @@
 import { useEffect, useState } from "react";
 
 /** A client-side estimate, never a claim of server progress. */
-export function RestaurantLoading({ phase = "search" }: { phase?: "search" | "details" }) {
+export function RestaurantLoading({ phase = "search", searchEstimate = 20 }: { phase?: "search" | "details"; searchEstimate?: number }) {
   // Keep the same clock as ranking transitions into loading restaurant details.
-  const [estimate] = useState(() => phase === "search" ? 20 : 5);
+  const [estimate] = useState(() => phase === "search" ? searchEstimate : 5);
   const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
     const started = performance.now();

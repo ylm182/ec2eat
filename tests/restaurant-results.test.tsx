@@ -15,7 +15,7 @@ async function setup(restored = false) {
   const card = await syntheticPlaces("results").details("synthetic-0", new AbortController().signal);
   const cards = [ { ...card, placeId: "place-a", name: "餐廳甲", source: "google-places", available: true, openNow: true }, { ...card, placeId: "place-b", name: "餐廳乙", source: "google-places", available: true, openNow: true } ];
   const saved = selectedFixture(); saved.decision.selectedPlaceId = "place-b";
-  mock.api.mockImplementation((_uid: string, url: string) => Promise.resolve({ cards: url.includes("/history/") ? [cards[1]] : cards }));
+  mock.api.mockImplementation((_uid: string, url: string) => Promise.resolve(url.endsWith("/travel") ? { originSource: "gps", routes: [{ placeId: "place-b", walking: { distanceMeters: 850, duration: "660s", durationSeconds: 660 }, driving: null }] } : { cards: url.includes("/history/") ? [cards[1]] : cards }));
   mock.decision.mockResolvedValue(saved);
   function Harness() {
     const [session, setSession] = useState(restored ? saved : { ...saved, status: "READY" as const, decision: { ...saved.decision, selectedPlaceId: null } });
@@ -50,4 +50,11 @@ it("does not celebrate or hide choices when saving fails", async () => {
   await screen.findByRole("alert");
   expect(screen.queryByTestId("fireworks")).toBeNull();
   expect(screen.getByText("餐廳甲")).toBeTruthy();
+});
+
+it("shows actual walking distance and time with joined restaurant actions", async () => {
+  await setup();
+  expect(await screen.findByText("由你的位置：步行 850 米 · 約 11 分鐘")).toBeTruthy();
+  const group = screen.getByRole("group", { name: "餐廳乙操作" });
+  expect(Array.from(group.querySelectorAll("button, a")).map(e => e.textContent)).toEqual(["揀呢間", "Openrice", "Google Maps ↗"]);
 });

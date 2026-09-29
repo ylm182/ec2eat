@@ -4,8 +4,8 @@ import { useRef } from "react";
 import { QuestionArt } from "./QuestionArt";
 export function EntrySwipe({ kind, disabled = false, onChoose }: {kind: "home" | "range" | "meal"; disabled?: boolean; onChoose: (direction: "left" | "right" | "up") => void}) {
   const lock = useRef(false);
-  const left = kind === "meal" ? "正餐" : kind === "home" ? "之前食過" : "附近 · 1 公里";
-  const right = kind === "meal" ? "小食" : kind === "home" ? "今次食咩" : "周圍搵 · 5 公里";
+  const left = kind === "meal" ? "正餐" : kind === "home" ? "之前食過" : "步行 20 分鐘內";
+  const right = kind === "meal" ? "小食" : kind === "home" ? "今次食咩" : "私家車 20 分鐘內";
   const choose = (direction: string) => {
     if (disabled || lock.current || (direction !== "left" && direction !== "right" && !(kind !== "home" && direction === "up"))) return;
     lock.current = true;
@@ -19,7 +19,7 @@ export function EntrySwipe({ kind, disabled = false, onChoose }: {kind: "home" |
         <div className="question-face"><QuestionArt kind={kind}/><div className="question-options"><span>← {left}</span><span>{right} →</span></div></div>
       </TinderCard>
     </div>
-    {kind === "range" && <button className="text-button" disabled={disabled} onClick={() => choose("up")}>遠一點 · 2 公里 ↑</button>}
+    {kind === "range" && <button className="text-button" disabled={disabled} onClick={() => choose("up")}>步行 30 分鐘內 ↑</button>}
     {kind === "meal" && <button className="text-button" disabled={disabled} onClick={() => choose("up")}>都得 ↑</button>}
     <div className="entry-actions"><button disabled={disabled} onClick={() => choose("left")}>← {left}</button><button disabled={disabled} onClick={() => choose("right")}>{right} →</button></div>
   </section>;

@@ -181,6 +181,7 @@ export async function collectContext(
           : "other",
     area: place.area,
     ...(input.diningIntent ? { diningIntent: input.diningIntent } : {}),
+    ...(input.travelChoice ? { travelChoice: input.travelChoice } : {}),
     ...(input.searchRadiusM ? { searchRadiusM: input.searchRadiusM } : {}),
     locationSource: place.source,
     weather:

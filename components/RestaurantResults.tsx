@@ -1,4 +1,6 @@
 "use client";
+import { ButtonGroup } from "./ui/button-group";
+import { travelResultSchema, type TravelResult } from "@/lib/restaurants/travel";
 import { SelectionFireworks } from "./SelectionFireworks";
 import { RestaurantMap } from "./RestaurantMap";
 import { Loading } from "./Loading";
@@ -32,6 +34,9 @@ export function RestaurantResults({
   onSession: (s: DecisionSession) => void;
   skipAuto?: boolean;
 }) {
+  const [routes, setRoutes] = useState<Record<string, TravelResult>>({});
+  const [routeOrigin, setRouteOrigin] = useState<"gps" | "manual">("manual");
+  const [routesLoading, setRoutesLoading] = useState(false);
   const [celebrate, setCelebrate] = useState(false);
   const successHeading = useRef<HTMLHeadingElement>(null);
   const [view, setView] = useState<"list" | "map">("list");
@@ -69,6 +74,20 @@ export function RestaurantResults({
   const path = "/api/decision/sessions/" + session.id;
   const callbacks = useRef({ session, onSession, location });
   callbacks.current = { session, onSession, location };
+  useEffect(() => {
+    setRoutes({});
+    if (!["READY", "SELECTED"].includes(session.status)) return;
+    const abort = new AbortController(); setRoutesLoading(true);
+    void authorizedJson(uid, path + "/travel", location ? { location } : {}, abort.signal)
+      .then(raw => {
+        const result = z.object({ originSource: z.enum(["gps", "manual"]), routes: z.array(travelResultSchema.extend({ placeId: z.string() })).max(10) }).parse(raw);
+        if (!abort.signal.aborted) { setRoutes(Object.fromEntries(result.routes.map(r => [r.placeId, r]))); setRouteOrigin(result.originSource); }
+      }).catch(() => { /* Display unavailable; never substitute straight-line distance. */ })
+      .finally(() => { if (!abort.signal.aborted) setRoutesLoading(false); });
+    return () => abort.abort();
+    // Coordinates remain request-only; changes recalculate current routes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uid, session.id, session.revision, session.status, location?.latitude, location?.longitude]);
   async function refresh() {
     const fresh = await decisionApi(uid, path);
     if (mounted.current) callbacks.current.onSession(fresh);
@@ -192,7 +211,7 @@ export function RestaurantResults({
   }, [selected, celebrate]);
   return (
     <section aria-label="餐廳選擇" className="restaurant-results">
-      {(searching || detailsLoading) ? <RestaurantLoading phase={searching ? "search" : "details"} /> : busy ? <Loading label="儲存中" /> : null}
+      {(searching || detailsLoading) ? <RestaurantLoading phase={searching ? "search" : "details"} searchEstimate={session.context.travelChoice ? 45 : 20} /> : busy ? <Loading label="儲存中" /> : null}
       {error && <p role="alert">{error}</p>}
       {session.status === "RECOMMENDING" ? (
         <>
@@ -203,7 +222,7 @@ export function RestaurantResults({
                 ? "呢個範圍暫時未有可用餐廳。"
                 : "答案已儲存，可以繼續搜尋餐廳。"}
           </p>
-          {empty && (
+          {empty && !session.context.travelChoice && (
             <p>
               已搜尋 {session.search!.radiusM / 1000} 公里；唔會自動擴大範圍。
             </p>
@@ -211,7 +230,7 @@ export function RestaurantResults({
           <button disabled={busy} onClick={() => search()}>
             重試搜尋
           </button>
-          {empty && session.search!.radiusM < 10000 && !session.search!.expanded && !pending.current && (
+          {empty && !session.context.travelChoice && session.search!.radiusM < 10000 && !session.search!.expanded && !pending.current && (
             <button disabled={busy} onClick={() => search(true)}>
               擴大範圍再搵
             </button>
@@ -290,13 +309,11 @@ export function RestaurantResults({
                   )[card.priceLevel ?? ""] ?? "未知"}{" "}
                   · 評分：{card.rating === null ? "未知" : card.rating + " / 5"}
                 </p>
-                {card.distanceM !== null && (
-                  <p>
-                    與{session.context.area}中心直線距離約{" "}
-                    {(card.distanceM / 1000).toFixed(1)} 公里（非步行距離）
-                  </p>
-                )}
-                <div className={`restaurant-actions${selected ? " is-selected" : ""}`}>
+                <p>{routeOrigin === "manual" ? "由地區中心" : "由你的位置"}：{routesLoading ? "計算步行路線中…" : routes[card.placeId]?.walking
+                  ? `步行 ${Math.round(routes[card.placeId].walking!.distanceMeters)} 米 · 約 ${Math.ceil(routes[card.placeId].walking!.durationSeconds / 60)} 分鐘`
+                  : "步行路線暫時未能提供"}</p>
+                {session.context.travelChoice === "drive20" && <p>{routes[card.placeId]?.driving ? `私家車約 ${Math.ceil(routes[card.placeId].driving!.durationSeconds / 60)} 分鐘（未計即時交通及泊車）` : "駕車路線暫時未能提供"}</p>}
+                <ButtonGroup aria-label={`${card.name ?? "餐廳"}操作`} className={`restaurant-actions${selected ? " is-selected" : ""}`}>
                 {!selected && (
                   <button
                     className="primary"
@@ -327,7 +344,7 @@ export function RestaurantResults({
                   aria-label={`在 Google Maps 查看${card.name ?? "餐廳"}`}
                 ><span translate="no">Google Maps</span><span aria-hidden="true"> ↗</span></a>
                   : <button disabled className="restaurant-map-link">地圖未提供</button>}
-                </div>
+                </ButtonGroup>
                 {card.source === "google-places" && card.attributions.length > 0 && (
                   <div className="places-attribution">
                     {card.attributions.map((a, i) => (
@@ -351,6 +368,7 @@ export function RestaurantResults({
             ))}
           </div>}
 
+          {Object.values(routes).some(r => r.walking) && <p className="hint">步行路線可能未涵蓋所有行人路，請留意現場路況。Google Maps</p>}
           {selected && (
             <div className="hint">
               <p>選擇已儲存；食完可以喺歷史確認到訪。</p>

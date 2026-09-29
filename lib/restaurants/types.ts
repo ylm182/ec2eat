@@ -51,6 +51,7 @@ export interface RestaurantProvider {
     signal: AbortSignal,
     restaurantOnly?: boolean,
   ): Promise<SearchPlace[]>;
+  facts?(id: string, signal: AbortSignal): Promise<RestaurantFacts>;
   details(
     id: string,
     signal: AbortSignal,
@@ -87,3 +88,13 @@ export function selectable(place: {
     ) && place.openNow !== false
   );
 }
+
+export type RestaurantFacts = {
+  displayName: string | null;
+  rating: number | null;
+  userRatingCount: number | null;
+  reviews: { text: string; rating: number | null }[];
+  priceLevel: string | null;
+  primaryType: string | null;
+  types: string[];
+};

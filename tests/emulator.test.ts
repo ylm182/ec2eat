@@ -1907,3 +1907,30 @@ it("physically clears expired weather from every replay collection while preserv
   }
   expect((await root.collection("sessions").doc("fresh").get()).get("context.weather.condition")).toBe("RAIN");
 });
+
+it("persists travel choice but never provider summaries or routes; travel endpoint enforces auth and origin", async () => {
+  const { syntheticPlaces } = await import("../lib/server/places");
+  const { restaurantRepository } = await import("../lib/server/restaurants");
+  const { POST } = await import("../app/api/decision/sessions/[id]/travel/route");
+  const identity = await googleToken("travel-choice"); const { db } = adminServices();
+  await db.doc("allowedUsers/" + identity.uid).set({ enabled: true });
+  const user = await authenticate(request(identity.token));
+  for (const travelChoice of ["walk20", "walk30", "drive20"] as const) {
+    const session = await decisionRepository(db,user).create({requestId:travelChoice,launchId:"travel",area:"中環",travelChoice});
+    const repo = restaurantRepository(db,user,()=>syntheticPlaces("results"));
+    const ready = await repo.recommend(session.id,{requestId:travelChoice+"-search",expectedRevision:session.revision,reason:"user_requested"});
+    expect(ready.context.travelChoice).toBe(travelChoice);
+    expect(ready.status).toBe("READY");
+    const raw=JSON.stringify((await db.doc(`users/${user.uid}/sessions/${session.id}`).get()).data());
+    expect(raw).not.toMatch(/distanceMeters|durationSeconds|Synthetic emulator restaurant|reviews|summary/);
+    await expect(repo.recommend(session.id,{requestId:travelChoice+"-expand",expectedRevision:ready.revision,reason:"automatic",expandArea:true})).rejects.toMatchObject({code:"INVALID_EXPANSION"});
+    const context={params:Promise.resolve({id:session.id})};
+    expect((await POST(new Request("http://localhost:3000/api/travel",{method:"POST"}),context)).status).toBe(401);
+    expect((await POST(new Request("http://localhost:3000/api/travel",{method:"POST",headers:{Authorization:`Bearer ${identity.token}`},body:"{}"}),context)).status).toBe(403);
+    const priorFixture = process.env.PLACES_FIXTURE;
+    process.env.PLACES_FIXTURE = "results";
+    try {
+    expect((await POST(new Request("http://localhost:3000/api/travel",{method:"POST",headers:{Authorization:`Bearer ${identity.token}`,Origin:"http://localhost:3000"},body:"{}"}),context)).status).toBe(200);
+    } finally { if (priorFixture === undefined) delete process.env.PLACES_FIXTURE; else process.env.PLACES_FIXTURE = priorFixture; }
+  }
+});

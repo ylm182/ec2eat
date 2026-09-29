@@ -825,3 +825,10 @@ main:has(.live-decision) { display:flex; flex-direction:column; }
 
 .restaurant-actions.is-selected { grid-template-columns:1fr 1fr; }
 .restaurant-actions > button, .restaurant-actions > .restaurant-map-link { min-width:0; padding:12px 4px; font-size:12px; }
+/* Joined outline button group, matching shadcn/ui ButtonGroup presentation. */
+.restaurant-actions.button-group { gap:0; border-radius:12px; isolation:isolate; }
+.restaurant-actions.button-group > :is(button,a) { border:1px solid #cab9e6; border-radius:0; box-shadow:none; }
+.restaurant-actions.button-group > :first-child { border-radius:12px 0 0 12px; }
+.restaurant-actions.button-group > :last-child { border-radius:0 12px 12px 0; }
+.restaurant-actions.button-group > :not(:first-child) { border-left:0; }
+.restaurant-actions.button-group > :focus-visible { position:relative; z-index:1; outline:3px solid #7843ce; outline-offset:2px; }

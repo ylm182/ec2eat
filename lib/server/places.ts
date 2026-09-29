@@ -40,6 +40,7 @@ export function placesProvider(): RestaurantProvider {
       providerMetric("google-places", "nearby", () => provider.nearby(...args)),
     text: (...args) =>
       providerMetric("google-places", "text", () => provider.text(...args)),
+    facts: (...args) => provider.facts(...args),
     details: (...args) =>
       providerMetric("google-places", "details", () =>
         provider.details(...args),

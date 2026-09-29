@@ -8,6 +8,7 @@ import {
   safeGoogleMapsUrl,
   type RestaurantProvider,
   type RestaurantCard,
+  type RestaurantFacts,
   type SearchPlace,
 } from "../restaurants/types";
 const attribution = z.object({
@@ -41,6 +42,8 @@ const place = z.object({
   currentOpeningHours: z.object({ openNow: z.boolean().optional() }).optional(),
   priceLevel: z.string().max(100).optional(),
   rating: z.number().min(0).max(5).optional(),
+  userRatingCount: z.number().int().nonnegative().optional(),
+  reviews: z.array(z.object({ text: z.object({ text: z.string() }).optional(), rating: z.number().min(1).max(5).optional() })).max(5).optional(),
   googleMapsUri: z.string().optional(),
   attributions: z.array(attribution).max(20).optional(),
   photos: z
@@ -143,6 +146,16 @@ export class GooglePlacesProvider implements RestaurantProvider {
       },
       signal,
     );
+  }
+  async facts(id: string, signal: AbortSignal): Promise<RestaurantFacts> {
+    placeIdSchema.parse(id);
+    const value = place.parse(await this.call(`places/${encodeURIComponent(id)}?languageCode=zh-TW`,
+      "id,displayName,rating,userRatingCount,reviews,priceLevel,primaryType,types", signal));
+    if (value.id !== id) throw new Error("Place ID mismatch");
+    return { displayName: value.displayName?.text ?? null, rating: value.rating ?? null,
+      userRatingCount: value.userRatingCount ?? null, priceLevel: value.priceLevel ?? null,
+      primaryType: value.primaryType ?? null, types: value.types ?? [],
+      reviews: (value.reviews ?? []).map(r => ({ text: (r.text?.text ?? "").slice(0, 1000), rating: r.rating ?? null })) };
   }
   async details(
     id: string,

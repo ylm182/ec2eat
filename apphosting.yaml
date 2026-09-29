@@ -75,9 +75,12 @@ env:
     value: laya==0.3.20
     availability: [ RUNTIME ]
 
-# Firebase browser configuration is public; server secrets must use Secret Manager.
-# Places display/search enabled for initial live verification; model input stays off.
-# Calendar connection verified; event reading still needs live verification.
-# Gemini project/model smoke test passed; runtime integration awaits verification.
-# Laya contract/private-repo wake verified; production latency and scheduler verification pending.
-# Weather still requires separate integration setup.
+  - variable: GOOGLE_ROUTES_API_KEY
+    secret: GOOGLE_ROUTES_API_KEY@1
+    availability: [ RUNTIME ]
+  - variable: RESTAURANT_SUMMARIES_ENABLED
+    value: "true"
+    availability: [ RUNTIME ]
+
+# Firebase browser configuration is public; server secrets use Secret Manager.
+# Routes and Gemini restaurant summaries are enabled for this rollout.

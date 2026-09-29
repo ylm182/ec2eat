@@ -1,4 +1,6 @@
 import "server-only";
+import { configuredRoutes, restaurantEnrichment } from "./restaurant-enrichment";
+import { travelLimits } from "../restaurants/travel";
 import { prepareLearning } from "./learning";
 import { assertDataActive } from "./data-guard";
 import { createHash, randomUUID } from "node:crypto";
@@ -95,7 +97,7 @@ export function restaurantRepository(
       const current = await get(id);
       if (
         input.expandArea &&
-        (!current.search ||
+        (current.context.travelChoice || !current.search ||
           current.search.result !== "empty" ||
           current.search.expanded || current.search.radiusM >= 10000)
       )
@@ -144,7 +146,7 @@ export function restaurantRepository(
           hash: digest,
           sessionId: id,
           owner,
-          leaseUntil: Timestamp.fromMillis(Date.now() + 150000),
+          leaseUntil: Timestamp.fromMillis(Date.now() + 240000),
           expiresAt: Timestamp.fromMillis(Date.now() + 7 * 86400000),
         });
         return null;
@@ -155,14 +157,14 @@ export function restaurantRepository(
         await budget();
         const distance = stopped.preferences.distanceTolerance;
         const base =
-          stopped.context.searchRadiusM ??
+          (stopped.context.travelChoice ? travelLimits[stopped.context.travelChoice].radiusM : undefined) ?? stopped.context.searchRadiusM ??
           (distance?.state === "answered" && distance.value >= 0.8 ? 5000 : 1500);
         const radius = input.expandArea
           ? stopped.search!.radiusM < 5000
             ? 5000
             : 10000
           : (stopped.search?.radiusM ?? base);
-        const found = await bounded(125000, (signal) =>
+        const found = await bounded(210000, (signal) =>
           searchRestaurants(
             stopped,
             centre.location,
@@ -170,6 +172,7 @@ export function restaurantRepository(
             p,
             (i, s) => layaService(db).rank(i, s),
             signal,
+            restaurantEnrichment(p, Boolean(stopped.context.travelChoice)),
           ),
         );
         return await db.runTransaction(async (tx) => {
@@ -210,7 +213,7 @@ export function restaurantRepository(
               confidence: found.result.confidence,
               confidenceKind: found.result.confidenceKind,
               fallbackReason: found.result.fallbackReason,
-              reason: "按可用距離及價格資料排序；未確認口味特徵。",
+              reason: stopped.context.travelChoice ? "按行程時間篩選，再依餐廳資料及偏好排序。" : "按可用距離及價格資料排序；未確認口味特徵。",
             },
           });
           validateTransition(before, next);
@@ -230,6 +233,8 @@ export function restaurantRepository(
             tx.update(op, { leaseUntil: Timestamp.fromMillis(0) });
         });
         if (error instanceof ApiError) throw error;
+        if (error instanceof Error && ["ROUTES_NOT_CONFIGURED", "ROUTES_UNAVAILABLE"].includes(error.message))
+          throw new ApiError(503, error.message, "暫時未能核對行程時間，請稍後重試。", true);
         throw new ApiError(
           503,
           "PLACES_UNAVAILABLE",
@@ -237,6 +242,24 @@ export function restaurantRepository(
           true,
         );
       }
+    },
+    async travel(id: string, location?: { latitude: number; longitude: number }) {
+      const s = await get(id);
+      if (!["READY", "SELECTED"].includes(s.status)) throw new ApiError(409, "INVALID_STATE", "請先完成餐廳搜尋。");
+      const p = matchingProvider(s);
+      if (p.source !== "google-places") return { routes: [], originSource: "manual" };
+      const origin = resolveLocation(location ? { location } : { area: s.context.area });
+      await budget();
+      const ids = s.decision.candidates.filter(c => s.status !== "SELECTED" || c.placeId === s.decision.selectedPlaceId).slice(0, 10).map(c => c.placeId);
+      const provider = configuredRoutes();
+      const modes = await Promise.allSettled([
+        bounded(10000, signal => provider.matrix(origin.location, ids, "WALK", signal)),
+        s.context.travelChoice === "drive20" ? bounded(10000, signal => provider.matrix(origin.location, ids, "DRIVE", signal)) : Promise.resolve(new Map()),
+      ]);
+      return { originSource: origin.source, routes: ids.map(placeId => ({ placeId,
+        walking: modes[0].status === "fulfilled" ? modes[0].value.get(placeId) ?? null : null,
+        driving: modes[1].status === "fulfilled" ? modes[1].value.get(placeId) ?? null : null,
+      })) };
     },
     async cards(id: string, selectedOnly: boolean | "ranking" = false) {
       const s = await get(id);

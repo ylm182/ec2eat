@@ -146,7 +146,7 @@ function AuthenticatedDecision({ uid }: { uid: string }) {
     // This component is keyed by verified UID.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  async function start(searchRadiusM: 1000 | 2000 | 5000 = 1000) {
+  async function start(travelChoice: "walk20" | "walk30" | "drive20" = "walk20") {
     if (locked.current) return;
     locked.current = true;
     setBusy(true);
@@ -155,7 +155,7 @@ function AuthenticatedDecision({ uid }: { uid: string }) {
       const body = createRequest.current ?? {
         requestId: crypto.randomUUID(),
         launchId: currentLaunchId(),
-        searchRadiusM,
+        travelChoice,
         diningIntent: diningIntent ?? "any",
         ...(location ? { location } : { area }),
       };
@@ -309,7 +309,7 @@ function AuthenticatedDecision({ uid }: { uid: string }) {
             ))}
           </select>
           <EntrySwipe key="range" kind="range" disabled={busy || locating || !!recoverId || !area}
-            onChoose={(direction) => void start(direction === "left" ? 1000 : direction === "up" ? 2000 : 5000)} />
+            onChoose={(direction) => void start(direction === "left" ? "walk20" : direction === "up" ? "walk30" : "drive20")} />
           </>}
           {busy && <Loading label="準備中" />}
 

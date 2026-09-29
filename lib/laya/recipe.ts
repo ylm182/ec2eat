@@ -14,6 +14,11 @@ const high: Record<Dimension, string> = {
   formality: "formal", comfort: "special treat", healthiness: "healthy",
   temperature: "hot", social: "sharing", distanceTolerance: "far", price: "expensive",
 };
+const low: Record<Dimension, string> = {
+  richness: "light", spiciness: "mild", novelty: "familiar", speed: "leisurely",
+  formality: "casual", comfort: "everyday", healthiness: "indulgent",
+  temperature: "cold", social: "individual portions", distanceTolerance: "nearby", price: "inexpensive",
+};
 const unit = (n: number) => {
   if (!Number.isFinite(n) || n < 0 || n > 1) throw new LayaFailure("laya_invalid_input");
   return String(Math.round(n * 100) / 100);
@@ -26,16 +31,16 @@ export function encodeLaya(input: DecisionInput) {
   });
   if (!active.length && !input.categoryPreference) throw new LayaFailure("laya_no_preference_evidence");
   if (input.stage === "restaurant" && !input.candidates.some(c =>
-    (input.categoryPreference && c.categoryId) || active.some(d => {
+    c.summary || (input.categoryPreference && c.categoryId) || active.some(d => {
       const f = c.features[d];
       return f && f.value !== null && f.confidence > 0;
     })
   )) throw new LayaFailure("laya_no_preference_evidence");
   const neutral = dimensions.filter(d => input.preferences[d].state === "neutral");
-  const state = [
+  const featureState = [
     "Match explicit preferences first. Values 0..1; 1 means:",
     active.map(d => `${d}=${high[d]}`).join(","),
-    "Cuisine is descriptive only; do not infer taste, speed or health from cuisine. Missing=?; neutral=no preference, never fill from priors. Candidate rows use the dimension order above; each value@confidence.",
+    ...(input.candidates.some(c => c.summary) ? [] : ["Cuisine is descriptive only; do not infer taste, speed or health from cuisine. Missing=?; neutral=no preference, never fill from priors. Candidate rows use the dimension order above; each value@confidence."]),
     ...active.map(d => {
       const current = input.preferences[d];
       const p = current.state === "unknown" ? input.priors[d]! : current;
@@ -48,16 +53,27 @@ export function encodeLaya(input: DecisionInput) {
     // Weak, minimized boolean context only; never raw Calendar/weather provider text.
     `Weak context: rain=${input.context.rain ?? "unknown"}, nextEventSoon=${input.context.nextEventSoon ?? "unknown"}.`,
   ].join("\n");
+  const state = input.candidates.some(c => c.summary) ? [
+    ...active.map(d => {
+      const current = input.preferences[d];
+      const p = current.state === "unknown" ? input.priors[d]! : current;
+      const preference = p.value! <= .35 ? low[d] : p.value! >= .65 ? high[d] : `moderate ${d}`;
+      return `${p.state === "answered" ? "Explicit preference" : "Weak historical preference"}: ${preference}.`;
+    }),
+    `No preference: ${neutral.join(", ") || "none specified"}. Other preferences unknown.`,
+    ...(input.categoryPreference ? [`Preferred category: ${input.categoryPreference}.`] : []),
+    ...(input.travelPreference ? [`Travel choice: ${input.travelPreference}.`] : []),
+  ].join("\n") : featureState;
   return {path: "/", body: {inputs: {...(input.stage === "restaurant" ? {mode: "score"} : {}), state, candidates: input.candidates.map(c => ({
     id: c.id,
-    description: [
+    description: c.summary ?? ([
       ...(c.cuisines?.length ? [`cuisine=${c.cuisines.join("/")}`] : []),
       ...(c.categoryId ? [`category=${c.categoryId}`] : []),
       ...active.map(d => {
         const f = c.features[d];
         return !f || f.value === null || f.confidence === 0 ? "?" : `${unit(f.value)}@${unit(f.confidence)}`;
       }),
-    ].join(",") || "No known features",
+    ].join(",") || "No known features"),
   }))}}};
 }
 const responseSchema = z.object({

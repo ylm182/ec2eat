@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { travelChoiceSchema } from "../restaurants/travel";
 
 export const dimensions = [
   "richness",
@@ -127,6 +128,7 @@ export const contextSchema = z
     meal: z.enum(["lunch", "dinner", "other"]),
     area: text,
     diningIntent: z.enum(["meal", "snack", "any"]).optional(),
+    travelChoice: travelChoiceSchema.optional(),
     searchRadiusM: z.union([z.literal(1000), z.literal(2000), z.literal(5000), z.literal(3000), z.literal(10000)]).optional(),
     locationSource: z.enum(["gps", "manual"]),
     weather: z
@@ -371,6 +373,7 @@ export const createSessionInput = z
     launchId: idSchema,
     area: text.optional(),
     diningIntent: z.enum(["meal", "snack", "any"]).optional(),
+    travelChoice: travelChoiceSchema.optional(),
     searchRadiusM: z.union([z.literal(1000), z.literal(2000), z.literal(5000), z.literal(3000), z.literal(10000)]).optional(),
     location: z
       .object({

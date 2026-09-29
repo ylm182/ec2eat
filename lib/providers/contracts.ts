@@ -11,8 +11,10 @@ export type Feature = {
 export type DecisionInput = {
   version: 1;
   stage: "archetype" | "restaurant";
+  travelPreference?: string;
   candidates: {
     id: string;
+    summary?: string;
     categoryId?: string;
     cuisines?: string[];
     distanceM?: number;

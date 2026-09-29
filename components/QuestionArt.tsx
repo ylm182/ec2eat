@@ -6,7 +6,7 @@ const scenes: Record<Dimension, [string, string]> = {
   distanceTolerance: ["🚶", "🚃"], price: ["🪙", "💎"],
 };
 export function QuestionArt({ dimension, kind }: { dimension?: Dimension; kind?: "home" | "range" | "meal" }) {
-  const pair = kind === "meal" ? ["🍱", "🍢"] : kind === "home" ? ["📖", "🍜"] : kind === "range" ? ["🚶", "🚃"] : scenes[dimension ?? "richness"];
+  const pair = kind === "meal" ? ["🍱", "🍢"] : kind === "home" ? ["📖", "🍜"] : kind === "range" ? ["🚶", "🚗"] : scenes[dimension ?? "richness"];
   // react-tinder-card reads event.target.className as a string. SVG uses
   // SVGAnimatedString, so decorative art must pass hit-testing to the HTML card.
   return <svg style={{ pointerEvents: "none" }} className="question-art" viewBox="0 0 360 290" aria-hidden="true">
